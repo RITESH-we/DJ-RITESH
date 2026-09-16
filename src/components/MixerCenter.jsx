@@ -52,7 +52,9 @@ const MixerCenter = ({
   return (
     <div
       style={{
-        width: '260px',
+        minWidth: '260px',
+        maxWidth: '360px',
+        width: '100%',
         background: 'linear-gradient(180deg, #13151e 0%, #0d0f15 100%)',
         borderRadius: '10px',
         border: '1px solid #232a3a',

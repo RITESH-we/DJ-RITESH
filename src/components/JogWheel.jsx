@@ -34,25 +34,28 @@ const JogWheel = ({
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [isPlaying, playbackRate]);
 
-  // Calculate mouse angle relative to jogwheel center
+  // Calculate mouse/touch angle relative to jogwheel center
   const getAngle = (e) => {
     if (!jogRef.current) return 0;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const rect = jogRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-    const dx = e.clientX - centerX;
-    const dy = e.clientY - centerY;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
     return (Math.atan2(dy, dx) * 180) / Math.PI;
   };
 
-  const handleMouseDown = (e) => {
-    e.preventDefault();
+  const handleStart = (e) => {
+    if (e.cancelable) e.preventDefault();
     isDragging.current = true;
     lastAngle.current = getAngle(e);
   };
 
-  const handleMouseMove = useCallback((e) => {
+  const handleMove = useCallback((e) => {
     if (!isDragging.current) return;
+    if (e.cancelable) e.preventDefault();
     const currentAngle = getAngle(e);
     let deltaAngle = currentAngle - lastAngle.current;
 
@@ -68,24 +71,32 @@ const JogWheel = ({
     onScratch(scratchDeltaSeconds);
   }, [onScratch]);
 
-  const handleMouseUp = useCallback(() => {
+  const handleEnd = useCallback(() => {
     isDragging.current = false;
   }, []);
 
   useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+    window.addEventListener('touchcancel', handleEnd);
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
+      window.removeEventListener('touchcancel', handleEnd);
     };
-  }, [handleMouseMove, handleMouseUp]);
+  }, [handleMove, handleEnd]);
 
   return (
     <div
       ref={jogRef}
-      onMouseDown={handleMouseDown}
+      onMouseDown={handleStart}
+      onTouchStart={handleStart}
       style={{
+        touchAction: 'none',
         width: `${size}px`,
         height: `${size}px`,
         borderRadius: '50%',

@@ -79,11 +79,50 @@ class SpotifyService {
     // Connected user account profile
     this.userProfile = JSON.parse(localStorage.getItem('spotify_user_profile') || 'null');
     this.isDemoConnected = localStorage.getItem('spotify_is_demo') === 'true';
+    this.isDeviceVerified = localStorage.getItem('dj_device_verified') === 'true';
 
-    // Default demo profile if in demo mode
-    if (this.isDemoConnected && !this.userProfile) {
+    // Device token for unique device identification
+    if (!localStorage.getItem('dj_device_id')) {
+      const devId = 'DEV-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '-' + Date.now().toString(36).toUpperCase();
+      localStorage.setItem('dj_device_id', devId);
+    }
+    this.deviceId = localStorage.getItem('dj_device_id');
+
+    // Auto-setup verified VIP profile if already verified on this device
+    if (this.isDeviceVerified && !this.userProfile) {
       this._setDemoProfile();
     }
+  }
+
+  // Check if current device is permanently verified
+  isVerified() {
+    return Boolean(this.isDeviceVerified || localStorage.getItem('dj_device_verified') === 'true');
+  }
+
+  // Verify device permanently with VIP Pro access
+  verifyDeviceAsVip() {
+    this.isDeviceVerified = true;
+    this.isDemoConnected = true;
+    localStorage.setItem('dj_device_verified', 'true');
+    localStorage.setItem('spotify_is_demo', 'true');
+    localStorage.setItem('dj_verified_at', new Date().toISOString());
+    this._setDemoProfile();
+    return this.userProfile;
+  }
+
+  // Unverify / reset device credentials
+  unverifyDevice() {
+    this.isDeviceVerified = false;
+    this.isDemoConnected = false;
+    this.userProfile = null;
+    this.accessToken = '';
+    this.refreshToken = '';
+    localStorage.removeItem('dj_device_verified');
+    localStorage.removeItem('spotify_is_demo');
+    localStorage.removeItem('spotify_user_profile');
+    localStorage.removeItem('spotify_access_token');
+    localStorage.removeItem('spotify_refresh_token');
+    localStorage.removeItem('spotify_token_expiry');
   }
 
   // --- OAuth 2.0 PKCE Helpers ---
@@ -196,6 +235,8 @@ class SpotifyService {
     localStorage.setItem('spotify_refresh_token', this.refreshToken);
     localStorage.setItem('spotify_token_expiry', this.tokenExpiry.toString());
     localStorage.setItem('spotify_is_demo', 'false');
+    localStorage.setItem('dj_device_verified', 'true');
+    this.isDeviceVerified = true;
 
     // Fetch user profile immediately
     await this.fetchRealUserProfile();

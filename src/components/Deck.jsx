@@ -193,7 +193,8 @@ const Deck = ({
         flexDirection: 'column',
         gap: '10px',
         position: 'relative',
-        minWidth: '380px',
+        minWidth: '280px',
+        width: '100%',
       }}
     >
       {/* Top Deck Info Bar */}
@@ -280,7 +281,7 @@ const Deck = ({
               playbackRate={audioEngine.decks[deckId].playbackRate}
               color={accentColor}
               onScratch={handleScratch}
-              size={180}
+              size={typeof window !== 'undefined' && window.innerWidth < 450 ? 150 : 180}
             />
 
             {/* Tempo Pitch Slider */}
