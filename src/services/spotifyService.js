@@ -155,6 +155,13 @@ class SpotifyService {
       .replace(/=+$/, '');
   }
 
+  getRedirectUri() {
+    let uri = window.location.origin + window.location.pathname;
+    // Normalize trailing slash
+    if (!uri.endsWith('/')) uri += '/';
+    return uri;
+  }
+
   // Starts real Spotify Authorization Code PKCE login
   async startOAuthPKCELogin(clientId) {
     if (!clientId) throw new Error('Spotify Client ID is required');
@@ -167,11 +174,7 @@ class SpotifyService {
 
     localStorage.setItem('spotify_code_verifier', verifier);
 
-    let origin = window.location.origin;
-    if (origin.includes('localhost')) {
-      origin = origin.replace('localhost', '127.0.0.1');
-    }
-    const redirectUri = origin + window.location.pathname;
+    const redirectUri = this.getRedirectUri();
     const scope = [
       'user-read-private',
       'user-read-email',
@@ -200,11 +203,7 @@ class SpotifyService {
   // Handle return from Spotify OAuth redirect
   async handleOAuthCallback(code) {
     const verifier = localStorage.getItem('spotify_code_verifier');
-    let origin = window.location.origin;
-    if (origin.includes('localhost')) {
-      origin = origin.replace('localhost', '127.0.0.1');
-    }
-    const redirectUri = origin + window.location.pathname;
+    const redirectUri = this.getRedirectUri();
 
     const payload = {
       method: 'POST',
