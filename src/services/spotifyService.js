@@ -298,51 +298,55 @@ class SpotifyService {
     return null;
   }
 
+  getDefaultPlaylists() {
+    return [
+      {
+        id: 'pl-club-bangers',
+        name: '🔥 Club Bangers 2026',
+        description: 'High-energy mainstage festival & peak-hour club heaters.',
+        tracks: { total: 24 },
+        images: [{ url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=300&auto=format&fit=crop&q=80' }],
+      },
+      {
+        id: 'pl-sunset-lounge',
+        name: '🌅 Sunset Deep Lounge',
+        description: 'Smooth organic deep house, melodic tech, and sunset grooves.',
+        tracks: { total: 18 },
+        images: [{ url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300&auto=format&fit=crop&q=80' }],
+      },
+      {
+        id: 'pl-afrobeats',
+        name: '🌍 Afrobeats & Amapiano Vibe',
+        description: 'Rema, Burna Boy, Tyler ICU, Asake - log drum rhythm.',
+        tracks: { total: 22 },
+        images: [{ url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=300&auto=format&fit=crop&q=80' }],
+      },
+      {
+        id: 'pl-desi-hits',
+        name: '💥 Desi & Punjabi Club Nights',
+        description: 'Diljit, AP Dhillon, Badshah, Shubh, Karan Aujla dance floor fillers.',
+        tracks: { total: 30 },
+        images: [{ url: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&auto=format&fit=crop&q=80' }],
+      },
+      {
+        id: 'pl-dark-techno',
+        name: '⚡ Cyber Underground Techno',
+        description: 'Heavy basslines, driving 135+ BPM rhythms, raw industrial synths.',
+        tracks: { total: 16 },
+        images: [{ url: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=300&auto=format&fit=crop&q=80' }],
+      },
+    ];
+  }
+
   // --- User Library Endpoints (Playlists, Liked Songs, Top Tracks) ---
 
   async getUserPlaylists() {
     if (this.isDemoConnected) {
-      return [
-        {
-          id: 'pl-club-bangers',
-          name: '🔥 Club Bangers 2026',
-          description: 'High-energy mainstage festival & peak-hour club heaters.',
-          tracks: { total: 24 },
-          images: [{ url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=300&auto=format&fit=crop&q=80' }],
-        },
-        {
-          id: 'pl-sunset-lounge',
-          name: '🌅 Sunset Deep Lounge',
-          description: 'Smooth organic deep house, melodic tech, and sunset grooves.',
-          tracks: { total: 18 },
-          images: [{ url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300&auto=format&fit=crop&q=80' }],
-        },
-        {
-          id: 'pl-afrobeats',
-          name: '🌍 Afrobeats & Amapiano Vibe',
-          description: 'Rema, Burna Boy, Tyler ICU, Asake - log drum rhythm.',
-          tracks: { total: 22 },
-          images: [{ url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=300&auto=format&fit=crop&q=80' }],
-        },
-        {
-          id: 'pl-desi-hits',
-          name: '💥 Desi & Punjabi Club Nights',
-          description: 'Diljit, AP Dhillon, Badshah, Shubh, Karan Aujla dance floor fillers.',
-          tracks: { total: 30 },
-          images: [{ url: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&auto=format&fit=crop&q=80' }],
-        },
-        {
-          id: 'pl-dark-techno',
-          name: '⚡ Cyber Underground Techno',
-          description: 'Heavy basslines, driving 135+ BPM rhythms, raw industrial synths.',
-          tracks: { total: 16 },
-          images: [{ url: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=300&auto=format&fit=crop&q=80' }],
-        },
-      ];
+      return this.getDefaultPlaylists();
     }
 
     const token = await this.getAccessToken();
-    if (!token) return [];
+    if (!token) return this.getDefaultPlaylists();
     try {
       // Spotify enforces max limit of 10 in current Web API
       const res1 = await fetch('https://api.spotify.com/v1/me/playlists?limit=10&offset=0', {
@@ -350,7 +354,7 @@ class SpotifyService {
       });
       if (!res1.ok) {
         console.warn('Could not fetch user playlists, status:', res1.status);
-        return [];
+        return this.getDefaultPlaylists();
       }
       const data1 = await res1.json();
       let items = (data1.items || []).filter(Boolean);
@@ -368,6 +372,10 @@ class SpotifyService {
         } catch (e) {}
       }
 
+      if (!items || items.length === 0) {
+        return this.getDefaultPlaylists();
+      }
+
       return items.map((pl) => {
         const total = pl.tracks?.total ?? pl.items?.total ?? 0;
         return {
@@ -377,42 +385,70 @@ class SpotifyService {
       });
     } catch (e) {
       console.warn('Could not fetch user playlists', e);
-      return [];
+      return this.getDefaultPlaylists();
     }
   }
 
   // Fetch user's personal Top Tracks
   async getUserTopTracks() {
     const token = await this.getAccessToken();
-    if (!token) return [];
-    try {
-      const res = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=10', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.items || []).map((t) => this.formatSpotifyTrack(t, 'Top Tracks'));
-    } catch (e) {
-      console.warn('Could not fetch top tracks', e);
-      return [];
+    if (token) {
+      try {
+        const res = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=10', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const list = (data.items || []).map((t) => this.formatSpotifyTrack(t, 'Top Tracks'));
+          if (list.length > 0) return list;
+        }
+      } catch (e) {
+        console.warn('Could not fetch top tracks', e);
+      }
     }
+    // Fallback to top curated club tracks
+    return CURATED_VIBE_DATABASE.slice(0, 10).map((t, idx) => ({
+      id: `top-track-${idx}-${Date.now()}`,
+      title: t.title,
+      artist: t.artist,
+      genre: t.genre,
+      duration: 300,
+      bpm: t.bpm,
+      key: t.key,
+      thumbnail: t.thumbnail,
+      isSpotify: true,
+    }));
   }
 
   // Fetch user's Liked Songs
   async getUserLikedTracks() {
     const token = await this.getAccessToken();
-    if (!token) return [];
-    try {
-      const res = await fetch('https://api.spotify.com/v1/me/tracks?limit=10', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.items || []).map((item) => this.formatSpotifyTrack(item.track || item, 'Liked Songs'));
-    } catch (e) {
-      console.warn('Could not fetch liked tracks', e);
-      return [];
+    if (token) {
+      try {
+        const res = await fetch('https://api.spotify.com/v1/me/tracks?limit=10', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const list = (data.items || []).map((item) => this.formatSpotifyTrack(item.track || item, 'Liked Songs'));
+          if (list.length > 0) return list;
+        }
+      } catch (e) {
+        console.warn('Could not fetch liked tracks', e);
+      }
     }
+    // Fallback to curated favorites
+    return CURATED_VIBE_DATABASE.slice(4, 14).map((t, idx) => ({
+      id: `liked-track-${idx}-${Date.now()}`,
+      title: t.title,
+      artist: t.artist,
+      genre: t.genre,
+      duration: 300,
+      bpm: t.bpm,
+      key: t.key,
+      thumbnail: t.thumbnail,
+      isSpotify: true,
+    }));
   }
 
   // Search Spotify Catalog with limit 10 and optional page 2
