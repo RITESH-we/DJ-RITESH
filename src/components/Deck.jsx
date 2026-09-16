@@ -26,6 +26,8 @@ const Deck = ({
   const [isLooping, setIsLooping] = useState(false);
   const [loopBeats, setLoopBeats] = useState(4);
   const [levels, setLevels] = useState({ peak: 0, rms: 0 });
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [isRealAudio, setIsRealAudio] = useState(false);
 
   const animFrameRef = useRef(null);
 
@@ -59,14 +61,19 @@ const Deck = ({
   // Handle track prop change
   useEffect(() => {
     if (track) {
+      setIsAudioLoading(true);
       audioEngine.loadTrack(deckId, track).then((res) => {
+        setIsAudioLoading(false);
         if (res) {
           setDuration(res.duration);
           setBpm(res.bpm);
+          setIsRealAudio(Boolean(res.isRealAudio));
           setCurrentTime(0);
           setCuePoint(0);
           setHotCues([null, null, null, null]);
         }
+      }).catch(() => {
+        setIsAudioLoading(false);
       });
     }
   }, [track, deckId]);
@@ -205,8 +212,23 @@ const Deck = ({
             DECK {deckId}
           </span>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#f0f4f8', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {track ? track.title : 'No Track Loaded'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f0f4f8', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={track ? track.title : ''}>
+                {track ? track.title : 'No Track Loaded'}
+              </div>
+              {isAudioLoading ? (
+                <span style={{ fontSize: '9px', background: '#ffaa0022', color: '#ffaa00', border: '1px solid #ffaa0055', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
+                  ⚡ STREAMING...
+                </span>
+              ) : isRealAudio ? (
+                <span style={{ fontSize: '9px', background: '#00ff8822', color: '#00ff88', border: '1px solid #00ff8855', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
+                  🟢 REAL AUDIO
+                </span>
+              ) : track ? (
+                <span style={{ fontSize: '9px', background: '#88888822', color: '#888888', border: '1px solid #88888855', padding: '1px 5px', borderRadius: '3px' }}>
+                  SYNTH BEAT
+                </span>
+              ) : null}
             </div>
             <div style={{ fontSize: '11px', color: '#7a8799' }}>
               {track ? `${track.artist || 'Unknown'} • ${track.genre || 'Electronic'}` : 'Select or drop a song to mix'}
