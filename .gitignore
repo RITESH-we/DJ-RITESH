@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-ssr
+*.local
+node-portable
+node.zip
+node.msi
+*.log
+.env
+.env.*
+.DS_Store
