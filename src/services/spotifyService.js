@@ -441,7 +441,7 @@ class SpotifyService {
       artist: artists,
       album: t.album?.name || '',
       thumbnail: t.album?.images?.[0]?.url || t.thumbnail || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=150&auto=format&fit=crop&q=80',
-      duration: t.duration_ms ? Math.round(t.duration_ms / 1000) : (t.duration || 195),
+      duration: t.duration_ms ? Math.max(300, Math.round(t.duration_ms / 1000)) : (t.duration ? Math.max(300, t.duration) : 300),
       bpm,
       key,
       previewUrl: t.preview_url || null,
