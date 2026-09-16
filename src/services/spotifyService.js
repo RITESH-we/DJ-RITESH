@@ -693,9 +693,15 @@ class SpotifyService {
   async loadTrackAudioBuffer(track) {
     audioEngine.resumeContext();
 
-    if (track.previewUrl) {
+    let streamUrl = track.previewUrl;
+    if (!streamUrl || typeof streamUrl !== 'string' || !streamUrl.startsWith('http')) {
+      streamUrl = await audioEngine.resolveRealAudioStream(track);
+      if (streamUrl) track.previewUrl = streamUrl;
+    }
+
+    if (streamUrl) {
       try {
-        const res = await fetch(track.previewUrl);
+        const res = await fetch(streamUrl);
         if (res.ok) {
           const arrayBuffer = await res.arrayBuffer();
           return await audioEngine.ctx.decodeAudioData(arrayBuffer);

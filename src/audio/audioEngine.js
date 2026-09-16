@@ -290,42 +290,107 @@ class DJAudioEngine {
     }
   }
 
+  // Resolve real audio stream URL from high-resolution audio CDN (CORS enabled)
+  async resolveRealAudioStream(track) {
+    if (!track) return null;
+    if (track.previewUrl && typeof track.previewUrl === 'string' && track.previewUrl.startsWith('http')) {
+      return track.previewUrl;
+    }
+
+    const title = track.title || track.name || '';
+    const artist = track.artist || (track.artists ? track.artists.map((a) => a.name).join(' ') : '');
+    const cleanQuery = `${title} ${artist}`.replace(/[^\w\s]/gi, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleanQuery) return null;
+
+    try {
+      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&entity=song&limit=1`);
+      if (res.ok) {
+        const data = await res.json();
+        const url = data.results?.[0]?.previewUrl;
+        if (url) return url;
+      }
+    } catch (e) {
+      console.warn('Real audio stream resolver query failed:', e);
+    }
+
+    // Try with title alone if composite search didn't match
+    if (title) {
+      try {
+        const cleanTitle = title.replace(/[^\w\s]/gi, ' ').replace(/\s+/g, ' ').trim();
+        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleanTitle)}&entity=song&limit=1`);
+        if (res.ok) {
+          const data = await res.json();
+          const url = data.results?.[0]?.previewUrl;
+          if (url) return url;
+        }
+      } catch (e) {}
+    }
+
+    return null;
+  }
+
   // Load track buffer
   async loadTrack(deckId, track) {
     this.resumeContext();
     const deck = this.decks[deckId];
-    if (!deck) return;
+    if (!deck) return null;
 
     // Stop current playback
     this.stop(deckId);
+    deck.isLoading = true;
 
     let audioBuffer = null;
+    let isRealAudio = false;
+
     if (track.audioBuffer) {
       audioBuffer = track.audioBuffer;
+      isRealAudio = true;
     } else if (track.file) {
-      const arrayBuffer = await track.file.arrayBuffer();
-      audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
-    } else if (track.previewUrl) {
       try {
-        const res = await fetch(track.previewUrl);
-        if (res.ok) {
-          const ab = await res.arrayBuffer();
-          audioBuffer = await this.ctx.decodeAudioData(ab);
-        }
+        const arrayBuffer = await track.file.arrayBuffer();
+        audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+        isRealAudio = true;
       } catch (e) {
-        console.warn('Could not decode previewUrl', e);
+        console.warn('Could not decode local file audio', e);
+      }
+    } else {
+      // Find real audio stream URL
+      let streamUrl = track.previewUrl;
+      if (!streamUrl || typeof streamUrl !== 'string' || !streamUrl.startsWith('http')) {
+        streamUrl = await this.resolveRealAudioStream(track);
+        if (streamUrl) track.previewUrl = streamUrl;
+      }
+
+      if (streamUrl) {
+        try {
+          const res = await fetch(streamUrl);
+          if (res.ok) {
+            const ab = await res.arrayBuffer();
+            audioBuffer = await this.ctx.decodeAudioData(ab);
+            isRealAudio = true;
+          }
+        } catch (e) {
+          console.warn('Could not fetch or decode real audio stream', e);
+        }
       }
     }
 
+    // Fallback synth track only if real audio could not be resolved
     if (!audioBuffer) {
       const targetBpm = track.bpm || 124;
       const genre = (track.genre || '').toLowerCase();
       const style = genre.includes('techno') ? 'dnb' : genre.includes('bass') ? 'bass' : 'house';
       audioBuffer = this._generateSynthTrack(targetBpm, 45, style);
+      isRealAudio = false;
     }
 
     deck.audioBuffer = audioBuffer;
-    deck.trackInfo = track;
+    deck.isRealAudio = isRealAudio;
+    deck.isLoading = false;
+    deck.trackInfo = {
+      ...track,
+      isRealAudio,
+    };
     deck.pauseOffset = 0;
     deck.cuePoint = 0;
     deck.hotCues = [null, null, null, null];
@@ -343,6 +408,7 @@ class DJAudioEngine {
     return {
       duration: audioBuffer.duration,
       bpm: deck.bpm,
+      isRealAudio,
     };
   }
 
