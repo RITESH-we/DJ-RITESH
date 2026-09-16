@@ -15,6 +15,8 @@ const App = () => {
   const [activeTracks, setActiveTracks] = useState({ A: null, B: null });
   const [crossfadeVal, setCrossfadeVal] = useState(0.5);
   const [audioStarted, setAudioStarted] = useState(false);
+  const [mobileView, setMobileView] = useState('all'); // 'all' | 'A' | 'mixer' | 'B'
+  const [isDeviceVerified, setIsDeviceVerified] = useState(spotifyService.isVerified());
 
   // Modals
   const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false);
@@ -175,14 +177,16 @@ const App = () => {
             <span>✨</span> AI Vibe Mix
           </button>
 
-          {/* Spotify Account button */}
+          {/* Spotify Account / Device Verification button */}
           <button
             onClick={() => setIsSpotifyAccountOpen(true)}
             style={{
-              background: 'linear-gradient(180deg, #183321 0%, #102417 100%)',
-              border: '1px solid #1db954',
+              background: isDeviceVerified
+                ? 'linear-gradient(180deg, #183321 0%, #102417 100%)'
+                : 'linear-gradient(180deg, #2b2210 0%, #1c1508 100%)',
+              border: `1px solid ${isDeviceVerified ? '#1db954' : '#ffaa00'}`,
               borderRadius: '6px',
-              color: '#1db954',
+              color: isDeviceVerified ? '#1db954' : '#ffcc00',
               fontWeight: 800,
               fontSize: '11px',
               padding: '7px 12px',
@@ -192,7 +196,7 @@ const App = () => {
               gap: '6px',
             }}
           >
-            <span>👤</span> {spotifyService.isConnected() ? (spotifyService.userProfile?.display_name || 'Spotify Active') : 'Spotify Library'}
+            <span>{isDeviceVerified ? '🟢' : '🔑'}</span> {isDeviceVerified ? (spotifyService.userProfile?.display_name || 'Spotify VIP') : 'Verify Device'}
           </button>
 
           {!audioStarted && (
@@ -207,39 +211,77 @@ const App = () => {
         </div>
       </header>
 
+      {/* Mobile Console Tab Switcher (Touch friendly) */}
+      <div className="mobile-view-tabs">
+        <button
+          type="button"
+          className={`mobile-view-tab ${mobileView === 'all' ? 'active-all' : ''}`}
+          onClick={() => setMobileView('all')}
+        >
+          ⚡ ALL
+        </button>
+        <button
+          type="button"
+          className={`mobile-view-tab ${mobileView === 'A' ? 'active-A' : ''}`}
+          onClick={() => setMobileView('A')}
+        >
+          🔵 DECK A
+        </button>
+        <button
+          type="button"
+          className={`mobile-view-tab ${mobileView === 'mixer' ? 'active-mixer' : ''}`}
+          onClick={() => setMobileView('mixer')}
+        >
+          🎛️ MIXER
+        </button>
+        <button
+          type="button"
+          className={`mobile-view-tab ${mobileView === 'B' ? 'active-B' : ''}`}
+          onClick={() => setMobileView('B')}
+        >
+          🔴 DECK B
+        </button>
+      </div>
+
       {/* Main DJ Console Hardware Chassis */}
       <main className="dj-console">
         {/* Left Deck (Deck A) */}
-        <Deck
-          deckId="A"
-          track={activeTracks.A}
-          otherDeckId="B"
-          accentColor="#00f0ff"
-          onTrackEnd={() => {
-            if (autoDjEngine.enabled) {
-              autoDjEngine.triggerTransition();
-            }
-          }}
-        />
+        {(mobileView === 'all' || mobileView === 'A') && (
+          <Deck
+            deckId="A"
+            track={activeTracks.A}
+            otherDeckId="B"
+            accentColor="#00f0ff"
+            onTrackEnd={() => {
+              if (autoDjEngine.enabled) {
+                autoDjEngine.triggerTransition();
+              }
+            }}
+          />
+        )}
 
         {/* Center Mixer */}
-        <MixerCenter
-          crossfadeValue={crossfadeVal}
-          onCrossfadeChange={handleCrossfadeChange}
-        />
+        {(mobileView === 'all' || mobileView === 'mixer') && (
+          <MixerCenter
+            crossfadeValue={crossfadeVal}
+            onCrossfadeChange={handleCrossfadeChange}
+          />
+        )}
 
         {/* Right Deck (Deck B) */}
-        <Deck
-          deckId="B"
-          track={activeTracks.B}
-          otherDeckId="A"
-          accentColor="#ff0077"
-          onTrackEnd={() => {
-            if (autoDjEngine.enabled) {
-              autoDjEngine.triggerTransition();
-            }
-          }}
-        />
+        {(mobileView === 'all' || mobileView === 'B') && (
+          <Deck
+            deckId="B"
+            track={activeTracks.B}
+            otherDeckId="A"
+            accentColor="#ff0077"
+            onTrackEnd={() => {
+              if (autoDjEngine.enabled) {
+                autoDjEngine.triggerTransition();
+              }
+            }}
+          />
+        )}
       </main>
 
       {/* Track Library & Auto-DJ Manager */}
@@ -273,7 +315,10 @@ const App = () => {
       {/* Spotify Account & Library Browser Modal */}
       <SpotifyAccountBrowser
         isOpen={isSpotifyAccountOpen}
-        onClose={() => setIsSpotifyAccountOpen(false)}
+        onClose={() => {
+          setIsSpotifyAccountOpen(false);
+          setIsDeviceVerified(spotifyService.isVerified());
+        }}
         onLoadPlaylist={handleLoadSpotifyPlaylist}
         onLoadDeck={handleLoadToDeck}
       />
