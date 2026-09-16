@@ -55,6 +55,10 @@ const App = () => {
   };
 
   const handleLoadToDeck = (deckId, track) => {
+    if (deckId === 'queue') {
+      handleAddSpotifyTrack(track);
+      return;
+    }
     audioEngine.resumeContext();
     setAudioStarted(true);
     setActiveTracks((prev) => ({ ...prev, [deckId]: track }));

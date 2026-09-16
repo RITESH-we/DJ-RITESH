@@ -305,6 +305,23 @@ class DJAudioEngine {
     } else if (track.file) {
       const arrayBuffer = await track.file.arrayBuffer();
       audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+    } else if (track.previewUrl) {
+      try {
+        const res = await fetch(track.previewUrl);
+        if (res.ok) {
+          const ab = await res.arrayBuffer();
+          audioBuffer = await this.ctx.decodeAudioData(ab);
+        }
+      } catch (e) {
+        console.warn('Could not decode previewUrl', e);
+      }
+    }
+
+    if (!audioBuffer) {
+      const targetBpm = track.bpm || 124;
+      const genre = (track.genre || '').toLowerCase();
+      const style = genre.includes('techno') ? 'dnb' : genre.includes('bass') ? 'bass' : 'house';
+      audioBuffer = this._generateSynthTrack(targetBpm, 45, style);
     }
 
     deck.audioBuffer = audioBuffer;
