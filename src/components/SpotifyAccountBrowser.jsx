@@ -536,6 +536,35 @@ const SpotifyAccountBrowser = ({
                         LOG IN SPOTIFY
                       </button>
                     </div>
+
+                    <div style={{ background: '#080b10', padding: '8px 12px', borderRadius: '6px', border: '1px solid #1a2233', fontSize: '11px', color: '#8291a5' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span>Redirect URI required in Spotify Dashboard:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(spotifyService.getRedirectUri());
+                            showToast('Copied exact Redirect URI to clipboard!');
+                          }}
+                          style={{
+                            background: '#122018',
+                            border: '1px solid #1db954',
+                            color: '#1db954',
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          📋 Copy URI
+                        </button>
+                      </div>
+                      <code style={{ color: '#00ff88', wordBreak: 'break-all' }}>{spotifyService.getRedirectUri()}</code>
+                      <div style={{ marginTop: '4px', color: '#ffaa00', fontSize: '10px' }}>
+                        ⚠️ If you see "redirect_uri: Not matching configuration", either paste this URI into your Spotify Dashboard App Settings, or simply click the green <strong>"⚡ VERIFY & UNLOCK THIS DEVICE"</strong> button above!
+                      </div>
+                    </div>
                   </form>
                 )}
               </div>
