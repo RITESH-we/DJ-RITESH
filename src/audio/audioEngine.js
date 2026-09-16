@@ -329,6 +329,58 @@ class DJAudioEngine {
     return null;
   }
 
+  // Seamlessly extends an AudioBuffer to at least minDurationSec (default: 300s = 5 minutes)
+  // using professional equal-power crossfading at each loop boundary to prevent audio clicks
+  extendAudioBuffer(inputBuffer, minDurationSec = 300) {
+    if (!inputBuffer) return inputBuffer;
+    if (inputBuffer.duration >= minDurationSec) {
+      return inputBuffer;
+    }
+
+    try {
+      const sampleRate = inputBuffer.sampleRate;
+      const numChannels = inputBuffer.numberOfChannels;
+      const origLength = inputBuffer.length;
+      const targetLength = Math.floor(minDurationSec * sampleRate);
+      const xfadeSamples = Math.min(Math.floor(sampleRate * 0.05), Math.floor(origLength * 0.1)); // 50ms smooth crossfade
+      const extended = this.ctx.createBuffer(numChannels, targetLength, sampleRate);
+
+      for (let ch = 0; ch < numChannels; ch++) {
+        const src = inputBuffer.getChannelData(ch);
+        const dest = extended.getChannelData(ch);
+
+        let outPos = 0;
+        let repeatCount = 0;
+
+        while (outPos < targetLength) {
+          const copyLen = Math.min(origLength, targetLength - outPos);
+
+          for (let i = 0; i < copyLen; i++) {
+            const destIdx = outPos + i;
+            if (destIdx >= targetLength) break;
+
+            if (repeatCount > 0 && i < xfadeSamples) {
+              const t = i / xfadeSamples;
+              const fadeIn = Math.sin(t * Math.PI * 0.5);
+              const fadeOut = Math.cos(t * Math.PI * 0.5);
+              dest[destIdx] = (src[i] * fadeIn) + (dest[destIdx] * fadeOut);
+            } else {
+              dest[destIdx] = src[i];
+            }
+          }
+
+          outPos += origLength - xfadeSamples;
+          repeatCount++;
+        }
+      }
+
+      return extended;
+    } catch (err) {
+      console.warn('Could not extend audio buffer', err);
+      return inputBuffer;
+    }
+  }
+
   // Load track buffer
   async loadTrack(deckId, track) {
     this.resumeContext();
@@ -375,13 +427,18 @@ class DJAudioEngine {
       }
     }
 
-    // Fallback synth track only if real audio could not be resolved
+    // Fallback synth track only if real audio could not be resolved (minimum 5 minutes)
     if (!audioBuffer) {
       const targetBpm = track.bpm || 124;
       const genre = (track.genre || '').toLowerCase();
       const style = genre.includes('techno') ? 'dnb' : genre.includes('bass') ? 'bass' : 'house';
-      audioBuffer = this._generateSynthTrack(targetBpm, 45, style);
+      audioBuffer = this._generateSynthTrack(targetBpm, 300, style);
       isRealAudio = false;
+    }
+
+    // Extend buffer to at least 5 minutes (300 seconds) so track never cuts out early
+    if (audioBuffer && audioBuffer.duration < 300) {
+      audioBuffer = this.extendAudioBuffer(audioBuffer, 300);
     }
 
     deck.audioBuffer = audioBuffer;
@@ -389,6 +446,7 @@ class DJAudioEngine {
     deck.isLoading = false;
     deck.trackInfo = {
       ...track,
+      duration: audioBuffer.duration,
       isRealAudio,
     };
     deck.pauseOffset = 0;
@@ -703,7 +761,8 @@ class DJAudioEngine {
         bpm: 128,
         key: '8A / Am',
         genre: 'Cyber House',
-        audioBuffer: this._generateSynthTrack(128, 45, 'house'),
+        duration: 300,
+        audioBuffer: this._generateSynthTrack(128, 300, 'house'),
       },
       {
         id: 'demo-2',
@@ -712,7 +771,8 @@ class DJAudioEngine {
         bpm: 124,
         key: '9B / G',
         genre: 'Deep Tech',
-        audioBuffer: this._generateSynthTrack(124, 45, 'deepTech'),
+        duration: 300,
+        audioBuffer: this._generateSynthTrack(124, 300, 'deepTech'),
       },
       {
         id: 'demo-3',
@@ -721,7 +781,8 @@ class DJAudioEngine {
         bpm: 140,
         key: '4A / Fm',
         genre: 'Future Bass',
-        audioBuffer: this._generateSynthTrack(140, 42, 'bass'),
+        duration: 300,
+        audioBuffer: this._generateSynthTrack(140, 300, 'bass'),
       },
       {
         id: 'demo-4',
@@ -730,7 +791,8 @@ class DJAudioEngine {
         bpm: 172,
         key: '11B / A',
         genre: 'Drum & Bass',
-        audioBuffer: this._generateSynthTrack(172, 40, 'dnb'),
+        duration: 300,
+        audioBuffer: this._generateSynthTrack(172, 300, 'dnb'),
       },
     ];
   }
