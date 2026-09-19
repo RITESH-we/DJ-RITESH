@@ -65,6 +65,26 @@ const App = () => {
     }
   }, []);
 
+  // Hook autoDjEngine deck changes so Deck UI and waveforms dynamically update during auto-mix
+  useEffect(() => {
+    autoDjEngine.onDeckTrackUpdate = (deckId, track) => {
+      setActiveTracks((prev) => ({ ...prev, [deckId]: track }));
+    };
+    return () => {
+      autoDjEngine.onDeckTrackUpdate = null;
+    };
+  }, []);
+
+  // Master handler: Start automated beatmixing across the entire playlist
+  const handleStartPlaylistBeatMix = async (tracksToMix, options = {}) => {
+    await audioEngine.resumeContext();
+    setAudioStarted(true);
+    const targetList = tracksToMix && tracksToMix.length > 0 ? tracksToMix : playlist;
+    if (!targetList || targetList.length === 0) return;
+    setPlaylist(targetList);
+    await autoDjEngine.startPlaylistBeatMix(targetList, options);
+  };
+
   // Sync crossfader state with audio engine
   const handleCrossfadeChange = (val) => {
     setCrossfadeVal(val);
@@ -306,6 +326,7 @@ const App = () => {
           setPlaylist={setPlaylist}
           activeTracks={activeTracks}
           onLoadToDeck={handleLoadToDeck}
+          onStartPlaylistBeatMix={handleStartPlaylistBeatMix}
           onOpenSpotify={() => setIsSpotifyModalOpen(true)}
           onOpenVibeMix={() => setIsVibeMixOpen(true)}
           onOpenSpotifyAccount={() => setIsSpotifyAccountOpen(true)}

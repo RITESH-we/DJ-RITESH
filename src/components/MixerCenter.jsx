@@ -156,13 +156,58 @@ const MixerCenter = ({
           />
         </div>
 
-        {/* Auto DJ Status Text */}
-        <div style={{ fontSize: '10px', color: '#a0aab8', textAlign: 'center', marginBottom: '8px', minHeight: '14px' }}>
-          {autoDjState.isTransitioning
-            ? `Mixing ${autoDjState.activeDeckId} -> ${autoDjState.nextDeckId} (${Math.round(autoDjState.transitionProgress * 100)}%)`
-            : autoDjState.enabled
-            ? `Playing Deck ${autoDjState.activeDeckId} • Auto-Mix on cue`
-            : 'Auto-DJ Inactive'}
+        {/* Auto DJ Status Text with Real-Time Beat Countdown */}
+        <div style={{ fontSize: '10px', color: '#a0aab8', textAlign: 'center', marginBottom: '8px', minHeight: '18px' }}>
+          {autoDjState.isTransitioning ? (
+            <span style={{ color: '#ff0077', fontWeight: 800 }}>
+              ⚡ Transitioning Deck {autoDjState.activeDeckId} ➔ {autoDjState.nextDeckId} ({Math.round(autoDjState.transitionProgress * 100)}%)
+            </span>
+          ) : autoDjState.enabled ? (
+            <span>
+              Playing Deck <strong style={{ color: autoDjState.activeDeckId === 'A' ? '#00f0ff' : '#ff0077' }}>{autoDjState.activeDeckId}</strong>
+              {autoDjState.secondsUntilMix !== null && (
+                <>
+                  {' '}• Mix in{' '}
+                  <strong style={{ color: '#00ff88', fontFamily: 'monospace' }}>
+                    {autoDjState.secondsUntilMix}s
+                  </strong>{' '}
+                  <span style={{ color: '#8899aa', fontSize: '9px' }}>
+                    (~{autoDjState.beatsUntilMix} beats)
+                  </span>
+                </>
+              )}
+            </span>
+          ) : (
+            'Auto-DJ Inactive'
+          )}
+        </div>
+
+        {/* Mix Mode Quick Selector */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginBottom: '8px' }}>
+          {[
+            { id: 'smartOutro', label: 'OUTRO' },
+            { id: 'quick60', label: '60s' },
+            { id: 'quick90', label: '90s' },
+            { id: 'full', label: 'FULL' },
+          ].map((m) => (
+            <button
+              key={m.id}
+              onClick={() => autoDjEngine.setMixMode(m.id)}
+              style={{
+                background: autoDjState.mixMode === m.id ? '#00f0ff22' : '#141722',
+                color: autoDjState.mixMode === m.id ? '#00f0ff' : '#6b778a',
+                border: `1px solid ${autoDjState.mixMode === m.id ? '#00f0ff' : '#232a3a'}`,
+                borderRadius: '3px',
+                padding: '2px 5px',
+                fontSize: '8px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+              title={`Mix Mode: ${m.label}`}
+            >
+              {m.label}
+            </button>
+          ))}
         </div>
 
         {/* "MIX NOW" One-Touch Transition Button */}
@@ -186,7 +231,7 @@ const MixerCenter = ({
           }}
           title="Instantly execute a smooth beatmatched transition right now!"
         >
-          {autoDjState.isTransitioning ? 'TRANSITIONING...' : '⚡ MIX NOW'}
+          {autoDjState.isTransitioning ? 'TRANSITIONING...' : '⚡ MIX TO NEXT NOW'}
         </button>
 
         {/* Transition Style Selector */}

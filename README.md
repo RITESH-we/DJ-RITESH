@@ -18,6 +18,12 @@
 
 ## 🌟 Key Features
 
+* 🚀 **Continuous Playlist Auto-Beatmixer**:
+  * **1-Click Non-Stop Mixing**: Upload any music playlist, audio folder (`.mp3`, `.wav`, `.m4a`, `.flac`, `.ogg`), or Spotify playlist and the engine automatically mixes every single track one-by-one sequentially!
+  * **Pro Bass-Swap & Beat Alignment**: At 50% transition progress, the outgoing bass drops cleanly while the incoming kick punches in, ensuring seamless club-standard transitions with zero clashing.
+  * **Real-Time Beat Countdown**: Live countdown displaying seconds and beats remaining until the next transition (`Next Beat-Mix in: 18s / 36 beats`).
+  * **Multiple Mix Modes**: Choose between `🎯 Smart Outro` (natural progression), `⚡ 60s Party Cut` (quick-fire bangers), `🎪 90s Festival Cut`, or `🎵 Full Songs`.
+  * **One-Touch Override**: Hit `[ ⚡ MIX NEXT SONG NOW ]` anytime to immediately trigger an instantaneous beatmatched blend to the next queued track.
 * 🎛️ **Dual Pioneer-Style Hardware Decks**:
   * Realistic vinyl jogwheels with tactile scratching, pitch bending, and spinbacks.
   * Real-time 60 FPS animated audio waveforms, cue flags, and loop indicators.
@@ -34,7 +40,7 @@
 * 🤖 **Smart Auto-DJ Transition Engine**:
   * Hands-free club mixing: automated beatmatching, Camelot harmonic key compatibility, bass-swapping, and outro loop smoothing.
 * 🟢 **Spotify VIP & Personal OAuth Library**:
-  * **Instant 1-Click VIP Pro Access**: Instant access to curated playlists, global top charts, and search across 100M+ songs.
+  * **Instant 1-Click VIP Pro Access**: Instant access to curated playlists, global top charts, and search across 100M+ tracks.
   * **Personal Account Link**: Connect your personal Spotify account via OAuth 2.0 PKCE to spin your private playlists.
 * 🔊 **Studio-Grade DSP Processing Strip**:
   * 3-Band isolator EQ with complete kill switches ($-24\text{ dB}$ to $+6\text{ dB}$).
@@ -77,6 +83,13 @@ Click **`🔑 Verify Device`** (or open the Spotify modal):
   * **Automated**: Press <kbd>TAB</kbd> (or click **`⚡ AUTO-DJ`**) to trigger a smooth beatmatched transition.
   * **Manual**: Slide the central crossfader or use <kbd>◄</kbd> and <kbd>►</kbd> arrow keys.
 * **Drops & Buildups**: Cut the low frequencies using the **LOW** knob or turn the **FILTER** knob for sweep effects!
+
+### 6. Upload One Playlist & Auto-Mix All Songs Non-Stop
+* **Drag & Drop**: Simply drop any folder of songs or audio files (`.mp3`, `.wav`, `.m4a`, `.flac`) into the playlist zone.
+* **Or Click Buttons**: Click **`📁 Upload Audio Files`** or **`📂 Upload Music Folder`**.
+* **Start Mixing**: Hit **`▶ START CONTINUOUS BEATMIX`**.
+* **Relax & Enjoy**: Track 1 plays on Deck A, Track 2 is preloaded and beat-synced on Deck B. When Track 1 finishes its outro or reaches the 60s/90s party mark, the mixer automatically bass-swaps and crossfades to Deck B. Deck A is then loaded with Track 3, beatmatched, and ready for the next drop!
+* **Override anytime**: Click **`⚡ MIX NEXT SONG NOW`** to blend immediately into the next track.
 
 ---
 

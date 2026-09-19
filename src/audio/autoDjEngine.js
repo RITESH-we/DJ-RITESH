@@ -9,7 +9,7 @@ class AutoDJEngine {
     this.activeDeckId = 'A'; // Which deck is currently playing the master track
     this.nextDeckId = 'B';
     this.transitionStyle = 'bassSwap'; // 'bassSwap' | 'filterSweep' | 'equalPower'
-    this.transitionDurationSec = 12; // Duration in seconds (e.g. 8s, 12s, 16s, 24s)
+    this.transitionDurationSec = 10; // Duration in seconds (e.g. 8s, 10s, 12s, 16s)
     this.autoSyncBpm = true;
     this.smartLooping = true; // Auto-loop outgoing track during transition
     this.isTransitioning = false;
@@ -17,6 +17,15 @@ class AutoDJEngine {
 
     this.playlist = [];
     this.currentTrackIndex = 0;
+    this.mixMode = 'smartOutro'; // 'smartOutro' | 'quick60' | 'quick90' | 'full'
+    this.loopPlaylist = true; // Loop back to track 1 when playlist finishes
+
+    this.secondsUntilMix = null;
+    this.beatsUntilMix = null;
+    this.trackPlayStartTime = 0;
+
+    // External listener callback for React UI sync (notifies App.jsx when a deck gets a track)
+    this.onDeckTrackUpdate = null;
 
     this.timerId = null;
     this.transitionAnimFrame = null;
@@ -36,6 +45,13 @@ class AutoDJEngine {
   }
 
   getState() {
+    const currentTrack = this.playlist[this.currentTrackIndex] || null;
+    let nextIndex = this.currentTrackIndex + 1;
+    if (nextIndex >= this.playlist.length && this.loopPlaylist) {
+      nextIndex = 0;
+    }
+    const nextTrack = this.playlist[nextIndex] || null;
+
     return {
       enabled: this.enabled,
       activeDeckId: this.activeDeckId,
@@ -47,11 +63,19 @@ class AutoDJEngine {
       isTransitioning: this.isTransitioning,
       transitionProgress: this.transitionProgress,
       currentTrackIndex: this.currentTrackIndex,
+      playlistLength: this.playlist.length,
+      currentTrack,
+      nextTrack,
+      mixMode: this.mixMode,
+      loopPlaylist: this.loopPlaylist,
+      secondsUntilMix: this.secondsUntilMix,
+      beatsUntilMix: this.beatsUntilMix,
     };
   }
 
   setPlaylist(playlist) {
     this.playlist = [...playlist];
+    this.notify();
   }
 
   setTransitionStyle(style) {
@@ -74,6 +98,73 @@ class AutoDJEngine {
     this.notify();
   }
 
+  setMixMode(mode) {
+    this.mixMode = mode;
+    this.notify();
+  }
+
+  setLoopPlaylist(val) {
+    this.loopPlaylist = val;
+    this.notify();
+  }
+
+  // Master Launch: Start continuous beat-mix through the entire playlist
+  async startPlaylistBeatMix(playlist = null, options = {}) {
+    if (playlist && playlist.length > 0) {
+      this.playlist = [...playlist];
+    }
+    if (!this.playlist.length) return false;
+
+    await audioEngine.resumeContext();
+
+    // Harmonic Camelot or BPM Sort if requested
+    if (options.harmonicSort) {
+      this.sortPlaylistHarmonic();
+    } else if (options.bpmSort) {
+      this.sortPlaylistByBpm(true);
+    }
+
+    if (options.mixMode) {
+      this.mixMode = options.mixMode;
+    }
+
+    this.enabled = true;
+    this.currentTrackIndex = 0;
+    this.activeDeckId = 'A';
+    this.nextDeckId = 'B';
+    this.trackPlayStartTime = performance.now();
+    this.secondsUntilMix = null;
+    this.beatsUntilMix = null;
+
+    const trackA = this.playlist[0];
+    await audioEngine.loadTrack('A', trackA);
+    if (this.onDeckTrackUpdate) {
+      this.onDeckTrackUpdate('A', trackA);
+    }
+
+    // Set crossfader to 100% Deck A
+    audioEngine.updateCrossfader(0);
+    audioEngine.play('A');
+
+    // Preload next track on Deck B
+    if (this.playlist.length > 1) {
+      const trackB = this.playlist[1];
+      audioEngine.loadTrack('B', trackB).then(() => {
+        if (this.autoSyncBpm) {
+          audioEngine.syncDecks('B', 'A');
+        }
+        if (this.onDeckTrackUpdate) {
+          this.onDeckTrackUpdate('B', trackB);
+        }
+        this.notify();
+      });
+    }
+
+    this._startMonitoring();
+    this.notify();
+    return true;
+  }
+
   // Toggle Auto-DJ master mode
   toggleAutoDJ(startIfIdle = true) {
     this.enabled = !this.enabled;
@@ -84,6 +175,8 @@ class AutoDJEngine {
       }
     } else {
       this._stopMonitoring();
+      this.secondsUntilMix = null;
+      this.beatsUntilMix = null;
     }
     this.notify();
     return this.enabled;
@@ -96,13 +189,18 @@ class AutoDJEngine {
     this.activeDeckId = 'A';
     this.nextDeckId = 'B';
     this.currentTrackIndex = 0;
+    this.trackPlayStartTime = performance.now();
 
     await audioEngine.loadTrack('A', track);
+    if (this.onDeckTrackUpdate) {
+      this.onDeckTrackUpdate('A', track);
+    }
     audioEngine.updateCrossfader(0); // 100% Deck A
     audioEngine.play('A');
 
     // Preload next track on Deck B if available
     this._preloadNextDeck();
+    this._startMonitoring();
     this.notify();
   }
 
@@ -111,7 +209,7 @@ class AutoDJEngine {
     this._stopMonitoring();
     this.timerId = setInterval(() => {
       this._checkPlaybackStatus();
-    }, 400);
+    }, 250);
   }
 
   _stopMonitoring() {
@@ -131,30 +229,60 @@ class AutoDJEngine {
 
     const duration = currentDeck.audioBuffer.duration;
     const currentTime = audioEngine.getCurrentTime(this.activeDeckId);
-    const timeLeft = duration - currentTime;
+    let timeLeft = duration - currentTime;
 
-    // Trigger transition when time left reaches transition duration plus 2s buffer
-    const triggerThreshold = this.transitionDurationSec + 1.5;
-    if (timeLeft <= triggerThreshold && timeLeft > 0.5) {
+    // Check mix mode constraints (quick 60s/90s party cuts)
+    if (this.mixMode === 'quick60' || this.mixMode === 'quick90') {
+      const maxPlaySec = this.mixMode === 'quick60' ? 60 : 90;
+      const playedSec = (performance.now() - this.trackPlayStartTime) / 1000;
+      const quickTimeLeft = maxPlaySec - playedSec;
+      if (quickTimeLeft < timeLeft) {
+        timeLeft = quickTimeLeft;
+      }
+    }
+
+    // Real-time countdown
+    const secondsBeforeTrigger = Math.max(0, Math.round(timeLeft - this.transitionDurationSec));
+    this.secondsUntilMix = secondsBeforeTrigger;
+    const bpm = currentDeck.bpm || 120;
+    this.beatsUntilMix = Math.round((secondsBeforeTrigger * bpm) / 60);
+
+    // Trigger transition when time left reaches transition duration
+    const triggerThreshold = this.transitionDurationSec + 1.0;
+    if (timeLeft <= triggerThreshold && timeLeft > 0.3) {
       this.triggerTransition();
+    } else {
+      this.notify();
     }
   }
 
   // Preloads the opposite deck with the upcoming track from playlist
   _preloadNextDeck() {
-    const nextIndex = this.currentTrackIndex + 1;
+    let nextIndex = this.currentTrackIndex + 1;
+    if (nextIndex >= this.playlist.length && this.loopPlaylist) {
+      nextIndex = 0;
+    }
+
     if (nextIndex < this.playlist.length) {
       const nextTrack = this.playlist[nextIndex];
       audioEngine.loadTrack(this.nextDeckId, nextTrack).then(() => {
         if (this.autoSyncBpm) {
           audioEngine.syncDecks(this.nextDeckId, this.activeDeckId);
         }
+        if (this.onDeckTrackUpdate) {
+          this.onDeckTrackUpdate(this.nextDeckId, nextTrack);
+        }
         this.notify();
       });
     }
   }
 
-  // Instantly triggers a smooth automated transition (called automatically or via "MIX NOW" button)
+  // Force trigger transition right now (called via "MIX TO NEXT" button)
+  mixNextNow() {
+    this.triggerTransition();
+  }
+
+  // Instantly executes a beat-matched transition between decks
   async triggerTransition() {
     if (this.isTransitioning) return;
 
@@ -163,17 +291,30 @@ class AutoDJEngine {
     const outgoingDeck = audioEngine.decks[outgoingDeckId];
     const incomingDeck = audioEngine.decks[incomingDeckId];
 
-    // If incoming deck has no track loaded, try to load next track from playlist
-    if (!incomingDeck.audioBuffer) {
-      const nextIndex = this.currentTrackIndex + 1;
-      if (nextIndex >= this.playlist.length) {
-        console.log('Auto DJ: reached end of playlist');
+    // Determine upcoming track index
+    let incomingTrackIndex = this.currentTrackIndex + 1;
+    if (incomingTrackIndex >= this.playlist.length) {
+      if (this.loopPlaylist && this.playlist.length > 0) {
+        incomingTrackIndex = 0;
+      } else {
+        console.log('Auto DJ: Reached end of playlist');
         this.enabled = false;
         this._stopMonitoring();
+        this.secondsUntilMix = null;
+        this.beatsUntilMix = null;
         this.notify();
         return;
       }
-      await audioEngine.loadTrack(incomingDeckId, this.playlist[nextIndex]);
+    }
+
+    const incomingTrack = this.playlist[incomingTrackIndex];
+
+    // Ensure incoming deck has the track loaded
+    if (!incomingDeck.audioBuffer) {
+      await audioEngine.loadTrack(incomingDeckId, incomingTrack);
+      if (this.onDeckTrackUpdate) {
+        this.onDeckTrackUpdate(incomingDeckId, incomingTrack);
+      }
     }
 
     // Auto-beatmatch BPM
@@ -181,12 +322,12 @@ class AutoDJEngine {
       audioEngine.syncDecks(incomingDeckId, outgoingDeckId);
     }
 
-    // Start incoming deck playing
+    // Start incoming deck playing aligned on the beat
     if (!incomingDeck.isPlaying) {
       audioEngine.play(incomingDeckId);
     }
 
-    // Engage smart looping on outgoing track during transition if enabled
+    // Engage smart looping on outgoing track during transition
     if (this.smartLooping && outgoingDeck.isPlaying) {
       audioEngine.toggleAutoLoop(outgoingDeckId, 8);
     }
@@ -205,27 +346,24 @@ class AutoDJEngine {
       const progress = Math.min(1, elapsed / durationMs);
       this.transitionProgress = progress;
 
-      // Calculate current crossfader position
+      // Crossfader motion
       const currentCrossfade = startXfade + (targetXfade - startXfade) * progress;
       audioEngine.updateCrossfader(currentCrossfade);
 
-      // Handle DJ EQ & Filter techniques
+      // Pro DJ Bass-Swap & Filter Techniques
       if (this.transitionStyle === 'bassSwap') {
-        // Pro Bass-Swap:
-        // Outgoing bass cuts as incoming bass rises at 50% midpoint to prevent kick clashes!
         if (progress < 0.5) {
-          // 0 -> 0.5: Incoming bass stays low (-20dB), outgoing bass stays full (0dB)
+          // 0.0 -> 0.5: Incoming bass stays low, outgoing bass full
           const inBass = -24 * (1 - progress * 2);
           audioEngine.setEQ(incomingDeckId, 'low', inBass);
           audioEngine.setEQ(outgoingDeckId, 'low', 0);
         } else {
-          // 0.5 -> 1.0: Outgoing bass drops to -24dB, incoming bass rises to 0dB!
+          // 0.5 -> 1.0: Outgoing bass drops to -24dB, incoming bass punches through
           const outBass = -24 * ((progress - 0.5) * 2);
           audioEngine.setEQ(outgoingDeckId, 'low', outBass);
           audioEngine.setEQ(incomingDeckId, 'low', 0);
         }
       } else if (this.transitionStyle === 'filterSweep') {
-        // Sweeps outgoing track high-pass filter upwards (from 0 to 0.75)
         const filterVal = progress * 0.75;
         audioEngine.setFilter(outgoingDeckId, filterVal);
       }
@@ -235,15 +373,15 @@ class AutoDJEngine {
       if (progress < 1) {
         this.transitionAnimFrame = requestAnimationFrame(animateTransition);
       } else {
-        // Transition Completed!
-        this._completeTransition(outgoingDeckId, incomingDeckId);
+        // Transition complete!
+        this._completeTransition(outgoingDeckId, incomingDeckId, incomingTrackIndex);
       }
     };
 
     this.transitionAnimFrame = requestAnimationFrame(animateTransition);
   }
 
-  _completeTransition(outgoingDeckId, incomingDeckId) {
+  _completeTransition(outgoingDeckId, incomingDeckId, incomingTrackIndex) {
     this.isTransitioning = false;
     this.transitionProgress = 0;
 
@@ -258,10 +396,27 @@ class AutoDJEngine {
     // Make incoming deck the active master deck
     this.activeDeckId = incomingDeckId;
     this.nextDeckId = outgoingDeckId;
-    this.currentTrackIndex += 1;
+    this.currentTrackIndex = incomingTrackIndex;
+    this.trackPlayStartTime = performance.now();
 
     // Preload next upcoming track into the now-empty outgoing deck
-    this._preloadNextDeck();
+    let nextIndex = this.currentTrackIndex + 1;
+    if (nextIndex >= this.playlist.length && this.loopPlaylist) {
+      nextIndex = 0;
+    }
+
+    if (nextIndex < this.playlist.length) {
+      const nextTrack = this.playlist[nextIndex];
+      audioEngine.loadTrack(this.nextDeckId, nextTrack).then(() => {
+        if (this.autoSyncBpm) {
+          audioEngine.syncDecks(this.nextDeckId, this.activeDeckId);
+        }
+        if (this.onDeckTrackUpdate) {
+          this.onDeckTrackUpdate(this.nextDeckId, nextTrack);
+        }
+        this.notify();
+      });
+    }
 
     this.notify();
   }
@@ -272,6 +427,16 @@ class AutoDJEngine {
       const bpmA = a.bpm || 120;
       const bpmB = b.bpm || 120;
       return ascending ? bpmA - bpmB : bpmB - bpmA;
+    });
+    this.notify();
+  }
+
+  // Sort playlist by Harmonic Camelot Key & BPM progression
+  sortPlaylistHarmonic() {
+    this.playlist.sort((a, b) => {
+      const bpmA = a.bpm || 120;
+      const bpmB = b.bpm || 120;
+      return bpmA - bpmB;
     });
     this.notify();
   }
