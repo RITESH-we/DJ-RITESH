@@ -79,6 +79,8 @@ class AutoDJEngine {
     this.transitionStyle = 'dynamic';
     this.activeExecutingStyle = 'bassSwap'; // The specific technique currently queued or running
     this.lastUsedStyle = null;
+    this.styleReason = 'Analyzing song harmonic & acoustic DNA...';
+    this.harmonicScore = 1.0;
 
     this.transitionDurationSec = 10;
     this.autoSyncBpm = true;
@@ -132,6 +134,8 @@ class AutoDJEngine {
       nextDeckId: this.nextDeckId,
       transitionStyle: this.transitionStyle,
       activeExecutingStyle: this.activeExecutingStyle,
+      styleReason: this.styleReason,
+      harmonicScore: this.harmonicScore,
       styleInfo,
       configuredStyleInfo,
       transitionDurationSec: this.transitionDurationSec,
@@ -190,36 +194,180 @@ class AutoDJEngine {
     this.notify();
   }
 
-  // Intelligently picks a creative transition technique that hasn't been used consecutively
-  _pickNextDynamicStyle() {
-    const allStyles = ['bassSwap', 'filterSweep', 'vinylBrake', 'dropCut', 'harmonicBlend', 'echoFade', 'beatRoll'];
-    // Filter out last used style so we NEVER stick to the same technique
-    let candidates = allStyles.filter((s) => s !== this.lastUsedStyle);
+  // Evaluates harmonic compatibility between two Camelot keys (e.g. "8A / Am" and "9A / Em" or "8A" and "8B")
+  _evaluateHarmonicCompatibility(keyA, keyB) {
+    if (!keyA || !keyB) return { compatible: true, score: 0.6, label: 'Harmonic Bridge' };
 
+    const parseCamelot = (str) => {
+      const match = String(str).match(/(\d{1,2})\s*([AB])/i);
+      if (!match) return null;
+      return { num: parseInt(match[1], 10), letter: match[2].toUpperCase() };
+    };
+
+    const cA = parseCamelot(keyA);
+    const cB = parseCamelot(keyB);
+    if (!cA || !cB) return { compatible: true, score: 0.6, label: 'Harmonic Bridge' };
+
+    // Exact Match (e.g. 8A -> 8A)
+    if (cA.num === cB.num && cA.letter === cB.letter) {
+      return { compatible: true, score: 1.0, label: `Exact Key Match (${cA.num}${cA.letter})` };
+    }
+
+    // Relative Major/Minor (e.g. 8A -> 8B)
+    if (cA.num === cB.num && cA.letter !== cB.letter) {
+      return { compatible: true, score: 0.95, label: `Relative Mode (${cA.num}${cA.letter} ➔ ${cB.num}${cB.letter})` };
+    }
+
+    // Adjacent on the Camelot 12-hour wheel (e.g. 8A -> 9A or 8A -> 7A)
+    const diff = Math.abs(cA.num - cB.num);
+    const isAdjacent = diff === 1 || diff === 11;
+    if (isAdjacent && cA.letter === cB.letter) {
+      return { compatible: true, score: 0.90, label: `Adjacent Harmonic (${cA.num}${cA.letter} ➔ ${cB.num}${cB.letter})` };
+    }
+
+    // Energy Lift (+2 on wheel, e.g. 8A -> 10A)
+    const isLift = (cB.num - cA.num + 12) % 12 === 2;
+    if (isLift && cA.letter === cB.letter) {
+      return { compatible: true, score: 0.75, label: `Energy Boost (+2 Key)` };
+    }
+
+    // Diagonal shift (+1 and flip A/B)
+    if (isAdjacent && cA.letter !== cB.letter) {
+      return { compatible: true, score: 0.70, label: `Diagonal Harmonic Blend` };
+    }
+
+    // Clashing keys
+    return { compatible: false, score: 0.20, label: `Key Modulation (${cA.num}${cA.letter} ➔ ${cB.num}${cB.letter})` };
+  }
+
+  // Intelligently selects the optimal mixing technique based on the songs' BPM delta, harmonic key, energy & acoustic profile (NEVER random!)
+  _pickNextDynamicStyle() {
     const currentDeck = audioEngine.decks[this.activeDeckId];
     let nextIndex = this.currentTrackIndex + 1;
     if (nextIndex >= this.playlist.length && this.loopPlaylist) {
       nextIndex = 0;
     }
-    const nextTrack = this.playlist[nextIndex];
+    const currentTrack = this.playlist[this.currentTrackIndex] || currentDeck?.trackInfo || null;
+    const nextTrack = this.playlist[nextIndex] || null;
 
-    if (currentDeck && nextTrack) {
-      const currentBpm = currentDeck.bpm || 120;
-      const nextBpm = nextTrack.bpm || 120;
-      const bpmDiff = Math.abs(currentBpm - nextBpm);
+    const currentBpm = currentDeck?.bpm || currentTrack?.bpm || 120;
+    const nextBpm = nextTrack?.bpm || 120;
+    const bpmDiff = Math.abs(currentBpm - nextBpm);
 
-      // Large tempo jump: prioritize brake, drop cut, or filter sweep
-      if (bpmDiff > 8) {
-        const tempoJumpStyles = ['vinylBrake', 'dropCut', 'filterSweep'].filter((s) => s !== this.lastUsedStyle);
-        if (tempoJumpStyles.length > 0) {
-          candidates = tempoJumpStyles;
-        }
-      }
+    const keyA = currentTrack?.key || currentDeck?.trackInfo?.key || '8A';
+    const keyB = nextTrack?.key || '8A';
+    const harmonic = this._evaluateHarmonicCompatibility(keyA, keyB);
+    this.harmonicScore = harmonic.score;
+
+    const energyA = currentTrack?.energy !== undefined ? currentTrack.energy : 0.8;
+    const energyB = nextTrack?.energy !== undefined ? nextTrack.energy : 0.8;
+    const avgEnergy = (energyA + energyB) / 2;
+
+    // Musically ranked candidate techniques derived directly from the two songs' musical parameters
+    const rankedTechniques = [];
+
+    // Rule 1: Wide Tempo Jump (BPM difference > 8)
+    if (bpmDiff > 8) {
+      rankedTechniques.push({
+        style: 'vinylBrake',
+        reason: `Tempo Jump: ${Math.round(currentBpm)} ➔ ${Math.round(nextBpm)} BPM (Turntable Motor Brake)`,
+      });
+      rankedTechniques.push({
+        style: 'dropCut',
+        reason: `Tempo Jump: ${Math.round(currentBpm)} ➔ ${Math.round(nextBpm)} BPM (Fast Downbeat Slam)`,
+      });
+      rankedTechniques.push({
+        style: 'filterSweep',
+        reason: `Tempo Bridge: ${Math.round(currentBpm)} ➔ ${Math.round(nextBpm)} BPM (Resonant Washout)`,
+      });
+    }
+    // Rule 2: Harmonically Compatible Keys & Close Tempos (Harmonic Match)
+    else if (harmonic.compatible && harmonic.score >= 0.85 && bpmDiff <= 4) {
+      rankedTechniques.push({
+        style: 'harmonicBlend',
+        reason: `${harmonic.label} (Silky Harmonic Phrase Blend)`,
+      });
+      rankedTechniques.push({
+        style: 'filterSweep',
+        reason: `${harmonic.label} (Melodic Filter Riser)`,
+      });
+      rankedTechniques.push({
+        style: 'bassSwap',
+        reason: `${harmonic.label} (Sub-Bass Frequency Swap)`,
+      });
+    }
+    // Rule 3: High Energy Peak-Time Dance / Bass Grooves (EDM, House, Techno, Afrobeats)
+    else if (avgEnergy >= 0.75 && bpmDiff <= 6) {
+      rankedTechniques.push({
+        style: 'bassSwap',
+        reason: `Club Peak Energy: ${Math.round(currentBpm)} BPM (Sub-Bass Punch)`,
+      });
+      rankedTechniques.push({
+        style: 'beatRoll',
+        reason: `Peak Energy: ${Math.round(currentBpm)} BPM (Rhythmic Stutter Buildup)`,
+      });
+      rankedTechniques.push({
+        style: 'filterSweep',
+        reason: `Energy Riser: ${Math.round(currentBpm)} BPM (High-Pass Sweep)`,
+      });
+    }
+    // Rule 4: Harmonic Clash (Unrelated keys where overlapping melodies would sound dissonant)
+    else if (!harmonic.compatible || harmonic.score <= 0.3) {
+      rankedTechniques.push({
+        style: 'echoFade',
+        reason: `${harmonic.label} (High-Pass Echo Out to Clean Key)`,
+      });
+      rankedTechniques.push({
+        style: 'filterSweep',
+        reason: `${harmonic.label} (Resonant Filter Decouple)`,
+      });
+      rankedTechniques.push({
+        style: 'dropCut',
+        reason: `${harmonic.label} (Sharp Downbeat Cut to New Key)`,
+      });
+    }
+    // Rule 5: Moderate Tempo Shift (4 < BPM Diff <= 8)
+    else if (bpmDiff > 4) {
+      rankedTechniques.push({
+        style: 'filterSweep',
+        reason: `Tempo Shift: ${Math.round(currentBpm)} ➔ ${Math.round(nextBpm)} BPM (Filter Sweep)`,
+      });
+      rankedTechniques.push({
+        style: 'beatRoll',
+        reason: `Tempo Shift: ${Math.round(currentBpm)} ➔ ${Math.round(nextBpm)} BPM (Quantized Roll)`,
+      });
+      rankedTechniques.push({
+        style: 'bassSwap',
+        reason: `Tempo Shift: ${Math.round(currentBpm)} ➔ ${Math.round(nextBpm)} BPM (Bass Swap)`,
+      });
+    }
+    // Rule 6: Default balanced musical transition
+    else {
+      rankedTechniques.push({
+        style: 'bassSwap',
+        reason: `Seamless Sub-Bass Swap (${Math.round(currentBpm)} BPM)`,
+      });
+      rankedTechniques.push({
+        style: 'harmonicBlend',
+        reason: `Harmonic Mid/High Layering`,
+      });
+      rankedTechniques.push({
+        style: 'filterSweep',
+        reason: `Resonant Filter Riser`,
+      });
     }
 
-    const chosen = candidates[Math.floor(Math.random() * candidates.length)] || 'bassSwap';
-    this.activeExecutingStyle = chosen;
-    return chosen;
+    // Select the highest-ranked technique that was NOT used on the immediately preceding song
+    let chosen = rankedTechniques[0];
+    if (chosen.style === this.lastUsedStyle && rankedTechniques.length > 1) {
+      chosen = rankedTechniques[1];
+    } else if (chosen.style === this.lastUsedStyle && rankedTechniques.length > 2) {
+      chosen = rankedTechniques[2];
+    }
+
+    this.activeExecutingStyle = chosen.style;
+    this.styleReason = chosen.reason;
+    return chosen.style;
   }
 
   // Master Launch: Start continuous beat-mix through the entire playlist
@@ -369,10 +517,10 @@ class AutoDJEngine {
       }
     }
 
-    const effectiveDuration = this._getStyleDuration(this.activeExecutingStyle);
+    const bpm = currentDeck.bpm || 120;
+    const effectiveDuration = this._getStyleDuration(this.activeExecutingStyle, bpm);
     const secondsBeforeTrigger = Math.max(0, Math.round(timeLeft - effectiveDuration));
     this.secondsUntilMix = secondsBeforeTrigger;
-    const bpm = currentDeck.bpm || 120;
     this.beatsUntilMix = Math.round((secondsBeforeTrigger * bpm) / 60);
 
     const triggerThreshold = effectiveDuration + 1.0;
@@ -383,24 +531,34 @@ class AutoDJEngine {
     }
   }
 
-  // Returns tailored duration for each distinct style
-  _getStyleDuration(style) {
+  // Returns tailored duration for each distinct style quantized to the song's BPM and phrase structure
+  _getStyleDuration(style, bpm = 120) {
+    const secPerBeat = 60 / (bpm || 120);
+    const barSec = secPerBeat * 4;
+
     switch (style) {
       case 'dropCut':
-        return 5;
+        // Exactly 1 or 2 bars before drop downbeat
+        return Math.round(Math.min(5, Math.max(3, barSec * 2)) * 10) / 10;
       case 'beatRoll':
-        return 6;
+        // Exactly 2 bars (8 beats) stutter roll
+        return Math.round(Math.max(4, barSec * 2) * 10) / 10;
       case 'vinylBrake':
-        return 7;
+        // 2 bars (8 beats) physical platter deceleration
+        return Math.round(Math.max(4, barSec * 2.5) * 10) / 10;
       case 'echoFade':
-        return 8;
+        // 3 bars (12 beats) resonant decay
+        return Math.round(Math.max(5, barSec * 3) * 10) / 10;
       case 'filterSweep':
-        return 9;
+        // 4 bars (16 beats) full phrase riser
+        return Math.round(Math.max(6, barSec * 4) * 10) / 10;
       case 'harmonicBlend':
-        return 14;
+        // 8 bars (32 beats) double phrase harmonic layering
+        return Math.round(Math.max(10, barSec * 8) * 10) / 10;
       case 'bassSwap':
       default:
-        return this.transitionDurationSec;
+        // Phrased aligned based on user setting or 4/8 bars
+        return Math.round(Math.max(6, Math.min(32, this.transitionDurationSec)) * 10) / 10;
     }
   }
 
@@ -481,8 +639,21 @@ class AutoDJEngine {
     }
 
     const activeStyle = this.activeExecutingStyle;
-    const durationSec = this._getStyleDuration(activeStyle);
+    const durationSec = this._getStyleDuration(activeStyle, incomingDeck.bpm || outgoingDeck.bpm || 120);
     const durationMs = durationSec * 1000;
+
+    // Automatically select the pro crossfader curve tailored to this transition
+    if (activeStyle === 'harmonicBlend') {
+      audioEngine.setCrossfadeCurve('slowBlend');
+    } else if (activeStyle === 'dropCut' || activeStyle === 'beatRoll') {
+      audioEngine.setCrossfadeCurve('cut');
+    } else if (activeStyle === 'bassSwap') {
+      audioEngine.setCrossfadeCurve('dip');
+    } else if (activeStyle === 'vinylBrake' || activeStyle === 'echoFade') {
+      audioEngine.setCrossfadeCurve('linear');
+    } else {
+      audioEngine.setCrossfadeCurve('equalPower');
+    }
 
     // Optional smart looping on outgoing track
     if (this.smartLooping && outgoingDeck.isPlaying && activeStyle !== 'vinylBrake') {
@@ -634,6 +805,7 @@ class AutoDJEngine {
     audioEngine.setEQ(incomingDeckId, 'mid', 0);
     audioEngine.setEQ(incomingDeckId, 'high', 0);
     audioEngine.setFilter(incomingDeckId, 0);
+    audioEngine.setCrossfadeCurve('equalPower');
 
     // Switch active master deck
     this.activeDeckId = incomingDeckId;

@@ -18,16 +18,14 @@
 
 ## 🌟 Key Features
 
-* 🔀 **Multi-Style Dynamic Adaptive Mixing (Never Sticks to One!)**:
-  * **Intelligent Technique Rotation**: Instead of repeating the same transition over and over, the engine dynamically selects and cycles between 7 distinct club transition techniques:
-    1. **⚡ Pro Bass Swap**: Cuts sub-bass on the outgoing track at 50% progress while incoming kick punches through with zero frequency clash.
-    2. **🌊 Resonant Filter Sweep**: Sweeps high-pass filter to build riser tension before the incoming track drops in full power.
-    3. **🛑 Turntable Vinyl Brake**: Emulates a real turntable power cut / motor stop before slamming into the incoming beat.
-    4. **💥 Drop Slam Cut**: Fast 5-second build-up with a sharp, high-energy cut right onto the incoming drop.
-    5. **✨ Harmonic Long Blend**: Silky 14-second equal-power crossfade with balanced mid layering for melodic transitions.
-    6. **🌀 High-Pass Echo Out**: Delay-like resonance sweep with rhythmic decay tail into the new song.
-    7. **🥁 Rhythmic Beat Roll**: Stutter loop build-up on the outgoing deck right before the drop hits.
-  * **Dynamic Tempo Jump Handling**: When mixing between tracks with large BPM differences ($\Delta \text{BPM} > 8$), the engine automatically prioritizes techniques like Vinyl Brake, Filter Sweep, or Drop Slam to make wide tempo changes sound deliberate, dramatic, and smooth!
+* 🔀 **100% Song-Based Intelligent Mixing (Zero Randomness)**:
+  * **Acoustic & Harmonic Decision Engine**: The mixer never uses random selections. Instead, every transition technique, crossfader curve, and phrase duration is mathematically and musically derived from the **two songs' acoustic parameters**:
+    1. **Harmonic Key Compatibility (Camelot Wheel)**: If keys are identical or adjacent (e.g., $8\text{A} \leftrightarrow 8\text{A}$ or $8\text{A} \leftrightarrow 9\text{A}$ / $8\text{B}$), the engine executes a silky **`Harmonic Long Blend`** with a slow blend curve, allowing chords and melodies to harmonize without dissonance. If keys clash ($8\text{A} \to 2\text{B}$), it automatically performs an **`Echo Out Riser`** or **`Filter Sweep`** to decouple frequencies before the new key lands.
+    2. **Tempo Delta ($\Delta \text{BPM}$)**: When mixing between tracks with large tempo disparities ($\Delta \text{BPM} > 8$, e.g., 100 BPM Hip-Hop into 128 BPM House), it executes a **`Turntable Vinyl Brake`** (motor deceleration to 0) or **`Drop Slam Cut`**, the gold standards of club mixing.
+    3. **Acoustic Energy & Bass Profiles**: Peak-energy club bangers ($\text{energy} \ge 0.75$) trigger surgical **`Sub-Bass Swaps`** with headroom dip curves so overlapping kicks never cause speaker distortion.
+    4. **Anti-Monotony Guard**: If the #1 acoustic match matches the previous song's transition, the engine selects the song's #2 acoustic match so the set is varied while remaining 100% grounded in the songs!
+  * **Real-Time Musical Rationale Display**: The console displays the exact reason why a technique was chosen (e.g., `🎵 Harmonic Match (8A ➔ 9A) • Silky Phrase Layering` or `🎵 Tempo Jump (105 ➔ 128 BPM) • Turntable Brake`).
+  * **Waveform RMS Drop Detection**: Hot Cues are mapped using deep acoustic energy profiling of the actual audio buffer, snapping Intro, Verse, Buildup, Drop 1, Break, Drop 2, and Outro directly to musical downbeats!
 * 🚀 **Continuous Playlist Auto-Beatmixer**:
   * **1-Click Non-Stop Mixing**: Upload any music playlist, audio folder (`.mp3`, `.wav`, `.m4a`, `.flac`, `.ogg`), or Spotify playlist and the engine automatically mixes every single track one-by-one sequentially!
   * **Real-Time Beat Countdown**: Live countdown displaying seconds and beats remaining until the next transition (`Next Beat-Mix in: 18s / 36 beats`).
