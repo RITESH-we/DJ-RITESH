@@ -8,6 +8,7 @@ const JogWheel = ({
   onScratch = () => {},
   onNudge = () => {},
   size = 190,
+  tribeAesthetic = 'hybrid',
 }) => {
   const [rotation, setRotation] = useState(0);
   const isDragging = useRef(false);
@@ -172,31 +173,43 @@ const JogWheel = ({
             width: `${size * 0.38}px`,
             height: `${size * 0.38}px`,
             borderRadius: '50%',
-            background: `radial-gradient(circle, ${color}22 0%, #151822 80%)`,
-            border: `2px solid ${color}88`,
+            background: tribeAesthetic === 'millennial'
+              ? 'radial-gradient(circle, #2a2215 0%, #11100e 80%)'
+              : tribeAesthetic === 'genz'
+              ? `radial-gradient(circle, ${color}44 0%, #0d1222 80%)`
+              : `radial-gradient(circle, ${color}22 0%, #151822 80%)`,
+            border: tribeAesthetic === 'millennial'
+              ? '2px solid #ffaa0088'
+              : `2px solid ${color}88`,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.8)',
+            boxShadow: tribeAesthetic === 'genz'
+              ? `0 0 16px ${color}66, 0 2px 8px rgba(0,0,0,0.8)`
+              : '0 2px 8px rgba(0,0,0,0.8)',
           }}
         >
           <span style={{
             fontFamily: 'Orbitron, sans-serif',
             fontSize: '11px',
             fontWeight: 900,
-            color: color,
+            color: tribeAesthetic === 'millennial' ? '#ffaa00' : color,
             letterSpacing: '1px',
           }}>
-            DECK {deckId}
+            {tribeAesthetic === 'genz' ? `✨ DECK ${deckId}` : `DECK ${deckId}`}
           </span>
           <span style={{
             fontSize: '8px',
-            color: '#8b97a8',
+            fontFamily: tribeAesthetic === 'millennial' ? 'monospace' : 'inherit',
+            color: tribeAesthetic === 'millennial' ? '#ffcc00' : '#8b97a8',
             marginTop: '2px',
             letterSpacing: '0.5px',
+            fontWeight: 700,
           }}>
-            {isPlaying ? 'ACTIVE' : 'IDLE'}
+            {isPlaying
+              ? (tribeAesthetic === 'millennial' ? '33⅓ RPM' : tribeAesthetic === 'genz' ? '🔥 SLAYING' : 'ACTIVE')
+              : (tribeAesthetic === 'millennial' ? 'VINYL 12"' : 'IDLE')}
           </span>
         </div>
       </div>

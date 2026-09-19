@@ -1294,6 +1294,208 @@ class DJAudioEngine {
 
     return audioBuffer;
   }
+
+  // Instant Club & Festival FX Soundboard Generator
+  // Synthesizes iconic Millennial & Gen Z DJ drops with zero latency
+  playClubFx(type = 'airhorn') {
+    if (!this.ctx) this.init();
+    this.resumeContext();
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const dest = this.masterGain || ctx.destination;
+
+    switch (type) {
+      case 'airhorn': {
+        // Classic Dancehall / Reggae club airhorn triple blast (Toot! Toot! TOOOOOT!)
+        const blasts = [
+          { start: 0, dur: 0.12 },
+          { start: 0.15, dur: 0.12 },
+          { start: 0.32, dur: 0.45 },
+        ];
+        const chordFreqs = [466.16, 587.33, 698.46]; // Bb4, D5, F5
+        blasts.forEach(({ start, dur }) => {
+          const t0 = now + start;
+          const t1 = t0 + dur;
+          const burstGain = ctx.createGain();
+          burstGain.gain.setValueAtTime(0.001, t0);
+          burstGain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.02);
+          burstGain.gain.setValueAtTime(0.35, t1 - 0.03);
+          burstGain.gain.exponentialRampToValueAtTime(0.001, t1);
+          burstGain.connect(dest);
+
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(1400, t0);
+          filter.Q.value = 2.0;
+          filter.connect(burstGain);
+
+          chordFreqs.forEach((freq) => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq * 0.92, t0);
+            osc.frequency.exponentialRampToValueAtTime(freq, t0 + 0.03);
+            osc.connect(filter);
+            osc.start(t0);
+            osc.stop(t1);
+          });
+        });
+        break;
+      }
+
+      case 'laser': {
+        // 90s Rave Sci-Fi Laser Dive (Pew! Pew! Pew!)
+        const pews = [0, 0.14, 0.28];
+        pews.forEach((delay) => {
+          const t0 = now + delay;
+          const t1 = t0 + 0.12;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(2600, t0);
+          osc.frequency.exponentialRampToValueAtTime(140, t1);
+
+          gain.gain.setValueAtTime(0.3, t0);
+          gain.gain.exponentialRampToValueAtTime(0.001, t1);
+
+          osc.connect(gain);
+          gain.connect(dest);
+          osc.start(t0);
+          osc.stop(t1);
+        });
+        break;
+      }
+
+      case 'rewind': {
+        // Turntable Vinyl Spinback / Rewind Screech
+        const dur = 0.85;
+        const osc = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1600, now);
+        filter.frequency.exponentialRampToValueAtTime(300, now + dur);
+        filter.Q.value = 3.5;
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(900, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + dur);
+
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(750, now);
+        osc2.frequency.exponentialRampToValueAtTime(80, now + dur);
+
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        osc.connect(filter);
+        osc2.connect(filter);
+        filter.connect(gain);
+        gain.connect(dest);
+
+        osc.start(now);
+        osc2.start(now);
+        osc.stop(now + dur);
+        osc2.stop(now + dur);
+        break;
+      }
+
+      case 'subDrop': {
+        // Gen Z 808 Trap Sub-Bass Boom
+        const dur = 1.3;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(38, now + 0.5);
+        osc.frequency.setValueAtTime(38, now + dur);
+
+        gain.gain.setValueAtTime(0.65, now);
+        gain.gain.exponentialRampToValueAtTime(0.45, now + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        osc.connect(gain);
+        gain.connect(dest);
+        osc.start(now);
+        osc.stop(now + dur);
+        break;
+      }
+
+      case 'siren': {
+        // 90s UK / Jamaican Dub Siren with echo
+        const dur = 1.6;
+        const osc = ctx.createOscillator();
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        const gain = ctx.createGain();
+        const delay = ctx.createDelay();
+        const feedback = ctx.createGain();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(700, now);
+
+        lfo.frequency.setValueAtTime(4.5, now);
+        lfoGain.gain.setValueAtTime(220, now);
+
+        lfo.connect(osc.frequency);
+
+        delay.delayTime.setValueAtTime(0.22, now);
+        feedback.gain.setValueAtTime(0.42, now);
+
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.setValueAtTime(0.22, now + 0.9);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        osc.connect(gain);
+        gain.connect(dest);
+
+        gain.connect(delay);
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(dest);
+
+        lfo.start(now);
+        osc.start(now);
+        lfo.stop(now + dur);
+        osc.stop(now + dur);
+        break;
+      }
+
+      case 'riser': {
+        // EDM Festival Hyper Riser Drop Build
+        const dur = 1.4;
+        const osc = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const gain = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(1400, now + dur);
+
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(400, now);
+        filter.frequency.exponentialRampToValueAtTime(3200, now + dur);
+        filter.Q.value = 4.0;
+
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.38, now + dur - 0.05);
+        gain.gain.setValueAtTime(0.001, now + dur);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(dest);
+
+        osc.start(now);
+        osc.stop(now + dur);
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
 }
 
 export const audioEngine = new DJAudioEngine();

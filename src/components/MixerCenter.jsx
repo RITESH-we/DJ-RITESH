@@ -7,6 +7,7 @@ import VuMeter from './VuMeter';
 const MixerCenter = ({
   crossfadeValue = 0.5,
   onCrossfadeChange = () => {},
+  tribeAesthetic = 'hybrid',
 }) => {
   const [masterVol, setMasterVol] = useState(0.85);
   const [curve, setCurve] = useState('equalPower');
@@ -91,15 +92,27 @@ const MixerCenter = ({
         minWidth: '260px',
         maxWidth: '360px',
         width: '100%',
-        background: 'linear-gradient(180deg, #13151e 0%, #0d0f15 100%)',
+        background: tribeAesthetic === 'millennial'
+          ? 'linear-gradient(180deg, #181d28 0%, #0e1118 100%)'
+          : tribeAesthetic === 'genz'
+          ? 'linear-gradient(145deg, rgba(17, 22, 38, 0.88) 0%, rgba(10, 14, 24, 0.88) 100%)'
+          : 'linear-gradient(180deg, #13151e 0%, #0d0f15 100%)',
         borderRadius: '10px',
-        border: '1px solid #232a3a',
+        border: tribeAesthetic === 'millennial'
+          ? '2px solid #2d384d'
+          : tribeAesthetic === 'genz'
+          ? '1px solid rgba(0, 240, 255, 0.35)'
+          : '1px solid #232a3a',
         padding: '12px 10px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
+        boxShadow: tribeAesthetic === 'genz'
+          ? '0 0 25px rgba(0, 240, 255, 0.2), 0 4px 20px rgba(0,0,0,0.6)'
+          : '0 4px 20px rgba(0,0,0,0.6)',
+        backdropFilter: tribeAesthetic === 'genz' ? 'blur(16px)' : 'none',
+        transition: 'all 0.3s ease',
       }}
     >
       {/* Top: Master Output Controls & VU Meter */}

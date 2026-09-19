@@ -18,6 +18,21 @@
 
 ## 🌟 Key Features
 
+* 👑 **Millennial × Gen Z Aesthetic Fusion Console**:
+  * **3-Mode Tribe Aesthetic Switcher**:
+    * **`✨ FUSION (Hybrid Default)`**: The ultimate bridge — heavyweight industrial Pioneer CDJ hardware chassis fused with Gen Z Y2K holographic iridescent borders, chromatic neon glow, and reactive ambient backlights.
+    * **`📼 MILLENNIAL RETRO CLUB`**: Authentic 2000s Pioneer CDJ-1000 & DJM-800 club atmosphere. Brushed onyx & gunmetal chassis, warm amber gold VFD digital displays, cassette mixtape cue typography (`TAPE SIDE A`, `CrO2 90`), and Technics 1200 stroboscopic vinyl platter styling.
+    * **`⚡ GEN Z CYBER-Y2K`**: Liquid glassmorphic panels (`backdrop-filter: blur(20px)`), electric cyan, hot magenta, acid lime, chromatic aberration glow, and viral hype stamps (`✨ MAIN CHARACTER`, `🔥 SLAY THE DROP`, `💀 NO SKIP SET`).
+  * **Dynamic Audio-Reactive "Ambient Vibe Aura"**: A halo of soft, diffused ambient light radiating behind the console chassis that pulses and expands in real-time with sub-bass kicks and song energy.
+  * **Instant Club FX Soundboard (Zero Latency)**: 6 studio-grade synthesized DJ drops with RGB backlit pads and global keyboard triggers:
+    * 🚨 **`AIRHORN`** (`Key Z`): Legendary dancehall / 90s & 2000s reggae club airhorn triple blast.
+    * 🔫 **`RAVE LASER`** (`Key X`): 90s/2000s retro space laser dive.
+    * ⏪ **`VINYL REWIND`** (`Key C`): Turntable vinyl spinback & stylus screech.
+    * 💥 **`808 SUB BOOM`** (`Key V`): Gen Z trap 808 sub-bass drop that rattles speakers.
+    * 🚨 **`DUB SIREN`** (`Key B`): Vintage UK rave analog dub siren with stereo echo feedback.
+    * ⚡ **`DROP RISER`** (`Key N`): EDM festival hyper-speed pitch riser build-up.
+  * **📸 `VIBE SNAP` (Viral Story Card Generator)**: 1-Click generator creating viral aesthetic story cards for Instagram, TikTok, and Snapchat with rotating vinyl animations, vintage cassette tapes, Camelot keys, and vibe slogans!
+
 * 🎆 **Real-Time 3D Audio-Reactive Club Visualizer Stage (60 FPS)**:
   * **Beat & Transient Reactive**: Direct Web Audio API frequency and time-domain analysis (`getMasterBeatMetrics`) measuring instantaneous sub-bass energy, kicks, midrange, treble, and transient attack. The visual canvas pulses, expands, and sends shockwaves on every kick drum and drop!
   * **Song-Adaptive Graphic Themes (Auto-Vibe Match)**:

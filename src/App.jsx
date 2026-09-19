@@ -6,6 +6,8 @@ import SpotifyModal from './components/SpotifyModal';
 import VibeMixModal from './components/VibeMixModal';
 import SpotifyAccountBrowser from './components/SpotifyAccountBrowser';
 import ClubVisualizer from './components/ClubVisualizer';
+import SoundFxBoard from './components/SoundFxBoard';
+import VibeCardModal from './components/VibeCardModal';
 import audioEngine from './audio/audioEngine';
 import autoDjEngine from './audio/autoDjEngine';
 import spotifyService from './services/spotifyService';
@@ -18,11 +20,14 @@ const App = () => {
   const [audioStarted, setAudioStarted] = useState(false);
   const [mobileView, setMobileView] = useState('all'); // 'all' | 'A' | 'mixer' | 'B'
   const [isDeviceVerified, setIsDeviceVerified] = useState(spotifyService.isVerified());
+  const [tribeAesthetic, setTribeAesthetic] = useState('hybrid'); // 'hybrid' | 'millennial' | 'genz'
+  const [auraEnergy, setAuraEnergy] = useState(0.2);
 
   // Modals
   const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false);
   const [isVibeMixOpen, setIsVibeMixOpen] = useState(false);
   const [isSpotifyAccountOpen, setIsSpotifyAccountOpen] = useState(false);
+  const [isVibeCardOpen, setIsVibeCardOpen] = useState(false);
 
   // Handle Spotify OAuth callback (?code=...) on page load
   useEffect(() => {
@@ -98,6 +103,20 @@ const App = () => {
       setCrossfadeVal(val);
     });
     return unsub;
+  }, []);
+
+  // Real-time audio reactive energy tracker for ambient aura backglow
+  useEffect(() => {
+    let animId;
+    const checkAura = () => {
+      const metrics = audioEngine.getMasterBeatMetrics();
+      if (metrics) {
+        setAuraEnergy(metrics.subBass * 0.7 + metrics.energy * 0.3);
+      }
+      animId = requestAnimationFrame(checkAura);
+    };
+    animId = requestAnimationFrame(checkAura);
+    return () => cancelAnimationFrame(animId);
   }, []);
 
   const handleLoadToDeck = (deckId, track) => {
@@ -239,7 +258,21 @@ const App = () => {
   };
 
   return (
-    <div className="dj-app">
+    <div className={`dj-app vibe-${tribeAesthetic}`}>
+      {/* Audio-Reactive Ambient Aura Backdrop Glow */}
+      <div
+        className="vibe-aura-backdrop"
+        style={{
+          background: tribeAesthetic === 'millennial'
+            ? 'radial-gradient(ellipse at center, rgba(255, 170, 0, 0.28) 0%, rgba(200, 80, 0, 0.12) 50%, transparent 75%)'
+            : tribeAesthetic === 'genz'
+            ? 'radial-gradient(ellipse at center, rgba(0, 240, 255, 0.32) 0%, rgba(255, 0, 119, 0.22) 40%, rgba(112, 0, 255, 0.16) 70%, transparent 85%)'
+            : 'radial-gradient(ellipse at center, rgba(0, 240, 255, 0.24) 0%, rgba(255, 0, 119, 0.18) 50%, transparent 75%)',
+          transform: `translateX(-50%) scale(${1 + auraEnergy * 0.16})`,
+          opacity: 0.25 + auraEnergy * 0.35,
+        }}
+      />
+
       {/* Top Navigation / Brand Bar */}
       <header className="dj-header">
         <div className="brand-group">
@@ -254,6 +287,99 @@ const App = () => {
         </div>
 
         <div className="header-actions">
+          {/* Tribe Aesthetic Switcher: Millennial × Gen Z */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: '#0a0d14',
+              padding: '3px',
+              borderRadius: '8px',
+              border: '1px solid #1e2638',
+              gap: '2px',
+            }}
+          >
+            <button
+              onClick={() => setTribeAesthetic('hybrid')}
+              title="Hybrid Fusion: Pioneer CDJ Hardware + Gen Z Y2K Holographic Glow"
+              style={{
+                background: tribeAesthetic === 'hybrid' ? 'linear-gradient(135deg, #00f0ff 0%, #ff0077 100%)' : 'transparent',
+                color: tribeAesthetic === 'hybrid' ? '#000' : '#8898aa',
+                border: 'none',
+                borderRadius: '5px',
+                padding: '5px 8px',
+                fontSize: '10px',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <span>✨</span> FUSION
+            </button>
+            <button
+              onClick={() => setTribeAesthetic('millennial')}
+              title="Millennial Retro Club: Pioneer CDJ-1000 Onyx, Amber VFD & Cassette Nostalgia"
+              style={{
+                background: tribeAesthetic === 'millennial' ? 'linear-gradient(135deg, #ffaa00 0%, #ff5500 100%)' : 'transparent',
+                color: tribeAesthetic === 'millennial' ? '#000' : '#8898aa',
+                border: 'none',
+                borderRadius: '5px',
+                padding: '5px 8px',
+                fontSize: '10px',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <span>📼</span> RETRO
+            </button>
+            <button
+              onClick={() => setTribeAesthetic('genz')}
+              title="Gen Z Cyber-Y2K: Iridescent Liquid Glass, Ambient Aura & Hype Badges"
+              style={{
+                background: tribeAesthetic === 'genz' ? 'linear-gradient(135deg, #00f0ff 0%, #7000ff 100%)' : 'transparent',
+                color: tribeAesthetic === 'genz' ? '#000' : '#8898aa',
+                border: 'none',
+                borderRadius: '5px',
+                padding: '5px 8px',
+                fontSize: '10px',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <span>⚡</span> GEN Z
+            </button>
+          </div>
+
+          {/* Share Vibe Story Card Button */}
+          <button
+            onClick={() => setIsVibeCardOpen(true)}
+            style={{
+              background: 'linear-gradient(135deg, #7000ff 0%, #ff0077 100%)',
+              border: 'none',
+              borderRadius: '6px',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: '11px',
+              padding: '7px 12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              boxShadow: '0 0 12px rgba(112, 0, 255, 0.4)',
+            }}
+            title="Generate a viral aesthetic Now Playing story card for Instagram / TikTok"
+          >
+            <span>📸</span> VIBE SNAP
+          </button>
+
           {/* AI Vibe Mix quick button */}
           <button
             onClick={() => setIsVibeMixOpen(true)}
@@ -303,8 +429,8 @@ const App = () => {
             </button>
           )}
 
-          <div className="shortcuts-badge" title="Space: Play/Pause | Tab: Mix Now | Left/Right: Crossfader | 1-8: Hot Cues | L: Auto Loop | [ ]: Halve/Double Loop">
-            ⌨ <kbd>SPACE</kbd> PLAY • <kbd>TAB</kbd> MIX • <kbd>1-8</kbd> CUES • <kbd>L</kbd> LOOP • <kbd>◄ ►</kbd> FADER
+          <div className="shortcuts-badge" title="Space: Play/Pause | Tab: Mix Now | Left/Right: Crossfader | 1-8: Hot Cues | L: Auto Loop | Z-N: Club FX Drops">
+            ⌨ <kbd>SPACE</kbd> PLAY • <kbd>TAB</kbd> MIX • <kbd>Z-N</kbd> FX DROPS • <kbd>1-8</kbd> CUES • <kbd>◄ ►</kbd> FADER
           </div>
         </div>
       </header>
@@ -314,6 +440,9 @@ const App = () => {
         activeTrack={currentOnAirTrack}
         activeDeckId={currentDeckId}
       />
+
+      {/* Club & Festival Soundboard (Millennial + Gen Z Drops) */}
+      <SoundFxBoard tribeAesthetic={tribeAesthetic} />
 
       {/* Mobile Console Tab Switcher (Touch friendly) */}
       <div className="mobile-view-tabs">
@@ -356,6 +485,7 @@ const App = () => {
             track={activeTracks.A}
             otherDeckId="B"
             accentColor="#00f0ff"
+            tribeAesthetic={tribeAesthetic}
             onTrackEnd={() => {
               if (autoDjEngine.enabled) {
                 autoDjEngine.triggerTransition();
@@ -369,6 +499,7 @@ const App = () => {
           <MixerCenter
             crossfadeValue={crossfadeVal}
             onCrossfadeChange={handleCrossfadeChange}
+            tribeAesthetic={tribeAesthetic}
           />
         )}
 
@@ -379,6 +510,7 @@ const App = () => {
             track={activeTracks.B}
             otherDeckId="A"
             accentColor="#ff0077"
+            tribeAesthetic={tribeAesthetic}
             onTrackEnd={() => {
               if (autoDjEngine.enabled) {
                 autoDjEngine.triggerTransition();
@@ -426,6 +558,14 @@ const App = () => {
         }}
         onLoadPlaylist={handleLoadSpotifyPlaylist}
         onLoadDeck={handleLoadToDeck}
+      />
+
+      {/* Gen Z & Millennial Now Playing Vibe Story Card Modal */}
+      <VibeCardModal
+        isOpen={isVibeCardOpen}
+        onClose={() => setIsVibeCardOpen(false)}
+        activeTrack={currentOnAirTrack}
+        tribeAesthetic={tribeAesthetic}
       />
     </div>
   );

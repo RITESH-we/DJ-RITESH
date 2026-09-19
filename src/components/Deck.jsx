@@ -11,6 +11,7 @@ const Deck = ({
   otherDeckId = 'B',
   accentColor = '#00f0ff', // cyan for A, magenta for B
   onTrackEnd = () => {},
+  tribeAesthetic = 'hybrid',
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -237,10 +238,21 @@ const Deck = ({
     <div
       style={{
         flex: 1,
-        background: 'linear-gradient(180deg, #161922 0%, #10121a 100%)',
+        background: tribeAesthetic === 'millennial'
+          ? 'linear-gradient(180deg, #181d28 0%, #10131c 100%)'
+          : tribeAesthetic === 'genz'
+          ? 'linear-gradient(145deg, rgba(16, 21, 36, 0.88) 0%, rgba(10, 13, 22, 0.88) 100%)'
+          : 'linear-gradient(180deg, #161922 0%, #10121a 100%)',
         borderRadius: '10px',
-        border: `1px solid ${isPlaying ? accentColor + '66' : '#232a3a'}`,
-        boxShadow: isPlaying ? `0 0 20px ${accentColor}22` : '0 4px 20px rgba(0,0,0,0.5)',
+        border: tribeAesthetic === 'millennial'
+          ? `2px solid ${isPlaying ? '#ffaa00' : '#2d374d'}`
+          : tribeAesthetic === 'genz'
+          ? `1px solid ${isPlaying ? accentColor : 'rgba(0, 240, 255, 0.3)'}`
+          : `1px solid ${isPlaying ? accentColor + '66' : '#232a3a'}`,
+        boxShadow: tribeAesthetic === 'genz'
+          ? (isPlaying ? `0 0 25px ${accentColor}44, inset 0 0 15px rgba(255, 0, 119, 0.15)` : '0 4px 20px rgba(0,0,0,0.6)')
+          : isPlaying ? `0 0 20px ${accentColor}22` : '0 4px 20px rgba(0,0,0,0.5)',
+        backdropFilter: tribeAesthetic === 'genz' ? 'blur(16px)' : 'none',
         padding: '12px',
         display: 'flex',
         flexDirection: 'column',
@@ -248,6 +260,7 @@ const Deck = ({
         position: 'relative',
         minWidth: '280px',
         width: '100%',
+        transition: 'all 0.3s ease',
       }}
     >
       {/* Top Deck Info Bar */}
@@ -257,19 +270,29 @@ const Deck = ({
             fontFamily: 'Orbitron, sans-serif',
             fontSize: '14px',
             fontWeight: 900,
-            color: accentColor,
-            background: `${accentColor}18`,
+            color: tribeAesthetic === 'millennial' ? '#ffaa00' : accentColor,
+            background: tribeAesthetic === 'millennial' ? '#ffaa0018' : `${accentColor}18`,
             padding: '2px 8px',
             borderRadius: '4px',
-            border: `1px solid ${accentColor}44`,
+            border: `1px solid ${tribeAesthetic === 'millennial' ? '#ffaa0044' : accentColor + '44'}`,
           }}>
-            DECK {deckId}
+            {tribeAesthetic === 'genz' ? `✨ DECK ${deckId}` : `DECK ${deckId}`}
           </span>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#f0f4f8', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={track ? track.title : ''}>
                 {track ? track.title : 'No Track Loaded'}
               </div>
+              {tribeAesthetic === 'millennial' && (
+                <span style={{ fontSize: '8px', background: '#ffaa0018', color: '#ffaa00', border: '1px solid #ffaa0044', padding: '1px 5px', borderRadius: '3px', fontFamily: 'monospace', fontWeight: 800 }}>
+                  📼 TAPE {deckId}
+                </span>
+              )}
+              {tribeAesthetic === 'genz' && (
+                <span style={{ fontSize: '8px', background: 'linear-gradient(90deg, #00f0ff25, #ff007725)', color: '#00f0ff', border: '1px solid #00f0ff66', padding: '1px 5px', borderRadius: '3px', fontWeight: 900 }}>
+                  🔥 SLAY
+                </span>
+              )}
               {isAudioLoading ? (
                 <span style={{ fontSize: '9px', background: '#ffaa0022', color: '#ffaa00', border: '1px solid #ffaa0055', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
                   ⚡ STREAMING...
@@ -335,6 +358,7 @@ const Deck = ({
               color={accentColor}
               onScratch={handleScratch}
               size={typeof window !== 'undefined' && window.innerWidth < 450 ? 150 : 180}
+              tribeAesthetic={tribeAesthetic}
             />
 
             {/* Tempo Pitch Slider */}
