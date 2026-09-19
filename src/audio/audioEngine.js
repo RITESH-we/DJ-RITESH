@@ -998,6 +998,55 @@ class DJAudioEngine {
     return { peak, rms };
   }
 
+  // Real-time audio frequency data for graphics visualizer
+  getMasterFrequencyData() {
+    if (!this.masterAnalyser) return new Uint8Array(0);
+    const data = new Uint8Array(this.masterAnalyser.frequencyBinCount);
+    this.masterAnalyser.getByteFrequencyData(data);
+    return data;
+  }
+
+  getDeckFrequencyData(deckId) {
+    const deck = this.decks[deckId];
+    if (!deck || !deck.analyserNode) return new Uint8Array(0);
+    const data = new Uint8Array(deck.analyserNode.frequencyBinCount);
+    deck.analyserNode.getByteFrequencyData(data);
+    return data;
+  }
+
+  // Real-time beat, bass, mid, treble, and transient onset detection metrics
+  getMasterBeatMetrics() {
+    if (!this.masterAnalyser) {
+      return { bass: 0, mid: 0, treble: 0, energy: 0, isBeat: false };
+    }
+    const data = new Uint8Array(this.masterAnalyser.frequencyBinCount);
+    this.masterAnalyser.getByteFrequencyData(data);
+
+    // Sub-bass & Kick: bins 0 - 10 (approx 20Hz - 250Hz)
+    let bassSum = 0;
+    for (let i = 0; i <= 10; i++) bassSum += data[i];
+    const bass = (bassSum / 11) / 255;
+
+    // Midrange: bins 11 - 70 (approx 250Hz - 2500Hz)
+    let midSum = 0;
+    for (let i = 11; i <= 70; i++) midSum += data[i];
+    const mid = (midSum / 60) / 255;
+
+    // Treble / Hi-hats: bins 71 - 200 (approx 2500Hz - 10kHz)
+    let trebleSum = 0;
+    for (let i = 71; i <= 200; i++) trebleSum += data[i];
+    const treble = (trebleSum / 130) / 255;
+
+    const energy = bass * 0.55 + mid * 0.3 + treble * 0.15;
+
+    // Beat transient trigger: sudden surge in bass energy
+    if (!this._lastBassAvg) this._lastBassAvg = 0;
+    const isBeat = bass > 0.48 && (bass - this._lastBassAvg) > 0.06;
+    this._lastBassAvg = this._lastBassAvg * 0.82 + bass * 0.18;
+
+    return { bass, mid, treble, energy, isBeat, frequencyData: data };
+  }
+
   // BPM Detection using peak interval histogram & energy analysis
   async detectBPM(audioBuffer) {
     try {

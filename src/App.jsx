@@ -5,6 +5,7 @@ import PlaylistManager from './components/PlaylistManager';
 import SpotifyModal from './components/SpotifyModal';
 import VibeMixModal from './components/VibeMixModal';
 import SpotifyAccountBrowser from './components/SpotifyAccountBrowser';
+import ClubVisualizer from './components/ClubVisualizer';
 import audioEngine from './audio/audioEngine';
 import autoDjEngine from './audio/autoDjEngine';
 import spotifyService from './services/spotifyService';
@@ -113,6 +114,12 @@ const App = () => {
     await audioEngine.resumeContext();
     setAudioStarted(true);
   };
+
+  // Determine on-air active deck and track for real-time audio-reactive graphics stage
+  const currentDeckId = crossfadeVal > 0.55 ? 'B' : crossfadeVal < 0.45 ? 'A' : (autoDjEngine.activeDeckId || 'A');
+  const currentOnAirTrack = currentDeckId === 'B'
+    ? (activeTracks.B || activeTracks.A)
+    : (activeTracks.A || activeTracks.B);
 
   // Global DJ Keyboard Shortcuts
   useEffect(() => {
@@ -301,6 +308,12 @@ const App = () => {
           </div>
         </div>
       </header>
+
+      {/* 3D Audio-Reactive Club Visualizer Stage */}
+      <ClubVisualizer
+        activeTrack={currentOnAirTrack}
+        activeDeckId={currentDeckId}
+      />
 
       {/* Mobile Console Tab Switcher (Touch friendly) */}
       <div className="mobile-view-tabs">
