@@ -307,3 +307,64 @@ button:active {
   50% { box-shadow: 0 0 25px rgba(255, 0, 119, 0.3); }
   100% { box-shadow: 0 0 15px rgba(255, 0, 119, 0.15); }
 }
+
+/* Pro Hardware Crossfader Slider Styling */
+.pro-crossfader-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  margin: 4px 0;
+  touch-action: pan-y;
+}
+
+.pro-crossfader-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #00f0ff 0%, #151e2d 46%, #ffffff 50%, #151e2d 54%, #ff0077 100%);
+  border: 1px solid #20293d;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.pro-crossfader-slider::-moz-range-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #00f0ff 0%, #151e2d 46%, #ffffff 50%, #151e2d 54%, #ff0077 100%);
+  border: 1px solid #20293d;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.pro-crossfader-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 26px;
+  width: 16px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #eef4fc 0%, #8b99ab 35%, #252e3e 50%, #8b99ab 65%, #ffffff 100%);
+  border: 1px solid #ffffffcc;
+  cursor: grab;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.9), 0 0 8px rgba(255, 255, 255, 0.3);
+  margin-top: -8px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.pro-crossfader-slider:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.1);
+  box-shadow: 0 4px 14px rgba(0, 240, 255, 0.7), 0 0 16px #ffffff;
+}
+
+.pro-crossfader-slider::-moz-range-thumb {
+  height: 26px;
+  width: 16px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #eef4fc 0%, #8b99ab 35%, #252e3e 50%, #8b99ab 65%, #ffffff 100%);
+  border: 1px solid #ffffffcc;
+  cursor: grab;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.9);
+}
