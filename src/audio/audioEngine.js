@@ -50,9 +50,10 @@ class DJAudioEngine {
       gainVal: 1.0,
       volumeFader: 0.85,
 
-      // Cues & Loops
+      // Cues & Loops (Industry standard 8 RGB performance pads)
       cuePoint: 0,
-      hotCues: [null, null, null, null],
+      hotCues: [null, null, null, null, null, null, null, null],
+      hotCueLabels: ['INTRO', 'VERSE', 'BUILD', 'DROP 🔥', 'BREAK', 'DROP 2', 'OUTRO', 'END'],
       isLooping: false,
       loopStart: 0,
       loopEnd: 0,
@@ -480,10 +481,14 @@ class DJAudioEngine {
     deck.bpm = deck.originalBpm;
     this.setPitchPercent(deckId, 0);
 
+    // Auto-detect best hot cues (Intro, Verse, Drop, Break, Outro)
+    const detectedCues = this.autoDetectHotCues(deckId);
+
     return {
       duration: audioBuffer.duration,
       bpm: deck.bpm,
       isRealAudio,
+      hotCues: detectedCues,
     };
   }
 
@@ -578,18 +583,49 @@ class DJAudioEngine {
     }
   }
 
-  // Hot Cues (pad 0-3)
-  setHotCue(deckId, index) {
+  // =========================================================================
+  // PRO HOT CUES (8-PAD RGB PERFORMANCE SYSTEM)
+  // =========================================================================
+
+  // Auto-detect musical drop points (Intro, Verse, Buildup, The Drop, Break, Drop 2, Outro)
+  autoDetectHotCues(deckId) {
     const deck = this.decks[deckId];
-    if (!deck) return;
+    if (!deck || !deck.audioBuffer) return [];
+
+    const duration = deck.audioBuffer.duration;
+    const bpm = deck.bpm || 120;
+    const secPerBeat = 60 / bpm;
+    const barSec = secPerBeat * 4;
+
+    const detected = [
+      { label: 'INTRO', time: 0.0 },
+      { label: 'VERSE', time: Math.min(duration * 0.15, 16 * barSec) },
+      { label: 'BUILD', time: Math.min(duration * 0.32, 32 * barSec) },
+      { label: 'DROP 🔥', time: Math.min(duration * 0.48, 48 * barSec) },
+      { label: 'BREAK', time: Math.min(duration * 0.62, 64 * barSec) },
+      { label: 'DROP 2', time: Math.min(duration * 0.74, 80 * barSec) },
+      { label: 'OUTRO', time: Math.max(0, duration - (16 * barSec)) },
+      { label: 'END CUT', time: Math.max(0, duration - (8 * barSec)) },
+    ];
+
+    deck.hotCues = detected.map((c) => Math.round(c.time * 100) / 100);
+    deck.hotCueLabels = detected.map((c) => c.label);
+    return deck.hotCues;
+  }
+
+  setHotCue(deckId, index, label = null) {
+    const deck = this.decks[deckId];
+    if (!deck) return null;
     const pos = this.getCurrentTime(deckId);
-    deck.hotCues[index] = pos;
-    return pos;
+    deck.hotCues[index] = Math.round(pos * 100) / 100;
+    if (!deck.hotCueLabels) deck.hotCueLabels = [];
+    deck.hotCueLabels[index] = label || `CUE ${index + 1}`;
+    return deck.hotCues[index];
   }
 
   jumpHotCue(deckId, index) {
     const deck = this.decks[deckId];
-    if (!deck || deck.hotCues[index] === null) return;
+    if (!deck || deck.hotCues[index] === null || deck.hotCues[index] === undefined) return;
     this.seek(deckId, deck.hotCues[index]);
   }
 
@@ -597,15 +633,30 @@ class DJAudioEngine {
     const deck = this.decks[deckId];
     if (!deck) return;
     deck.hotCues[index] = null;
+    if (deck.hotCueLabels) deck.hotCueLabels[index] = null;
   }
 
-  // Looping
+  // Beat Jump (Jump forward/back by exact musical beats)
+  beatJump(deckId, beats) {
+    const deck = this.decks[deckId];
+    if (!deck || !deck.audioBuffer) return;
+    const bpm = deck.bpm || 120;
+    const secondsPerBeat = 60 / bpm;
+    const deltaSec = beats * secondsPerBeat;
+    const currentPos = this.getCurrentTime(deckId);
+    const targetPos = Math.max(0, Math.min(deck.audioBuffer.duration, currentPos + deltaSec));
+    this.seek(deckId, targetPos);
+  }
+
+  // =========================================================================
+  // ADVANCED AUTO LOOPING & QUANTIZED ROLLS
+  // =========================================================================
+
   toggleAutoLoop(deckId, beats) {
     const deck = this.decks[deckId];
     if (!deck || !deck.audioBuffer) return false;
 
     if (deck.isLooping && deck.loopLengthBeats === beats) {
-      // Exit loop
       this.exitLoop(deckId);
       return false;
     }
@@ -615,8 +666,12 @@ class DJAudioEngine {
     const secondsPerBeat = 60 / bpm;
     const loopDuration = beats * secondsPerBeat;
 
-    deck.loopStart = currentPos;
-    deck.loopEnd = Math.min(deck.audioBuffer.duration, currentPos + loopDuration);
+    // Quantize loop start to nearest beat
+    const beatIndex = Math.floor(currentPos / secondsPerBeat);
+    const quantizedStart = Math.max(0, beatIndex * secondsPerBeat);
+
+    deck.loopStart = quantizedStart;
+    deck.loopEnd = Math.min(deck.audioBuffer.duration, quantizedStart + loopDuration);
     deck.loopLengthBeats = beats;
     deck.isLooping = true;
 
@@ -625,7 +680,74 @@ class DJAudioEngine {
       deck.sourceNode.loopStart = deck.loopStart;
       deck.sourceNode.loopEnd = deck.loopEnd;
     }
+
+    // If current playback is outside loop bounds, snap into loop immediately
+    if (deck.isPlaying && (currentPos < deck.loopStart || currentPos >= deck.loopEnd)) {
+      this.seek(deckId, deck.loopStart);
+    }
+
     return true;
+  }
+
+  // Halve current loop length (e.g. 8 -> 4 -> 2 -> 1 -> 1/2 beat)
+  halfLoop(deckId) {
+    const deck = this.decks[deckId];
+    if (!deck || !deck.isLooping) return false;
+    const currentBeats = deck.loopLengthBeats || 4;
+    const newBeats = Math.max(0.0625, currentBeats / 2);
+    return this.toggleAutoLoop(deckId, newBeats);
+  }
+
+  // Double current loop length (e.g. 1 -> 2 -> 4 -> 8 -> 16 -> 32 beats)
+  doubleLoop(deckId) {
+    const deck = this.decks[deckId];
+    if (!deck || !deck.isLooping) return false;
+    const currentBeats = deck.loopLengthBeats || 4;
+    const newBeats = Math.min(64, currentBeats * 2);
+    return this.toggleAutoLoop(deckId, newBeats);
+  }
+
+  // Reloop / Jump back into last configured loop
+  reloop(deckId) {
+    const deck = this.decks[deckId];
+    if (!deck) return false;
+    if (deck.isLooping) {
+      this.exitLoop(deckId);
+      return false;
+    }
+    if (deck.loopEnd > deck.loopStart) {
+      deck.isLooping = true;
+      if (deck.sourceNode) {
+        deck.sourceNode.loop = true;
+        deck.sourceNode.loopStart = deck.loopStart;
+        deck.sourceNode.loopEnd = deck.loopEnd;
+      }
+      this.seek(deckId, deck.loopStart);
+      return true;
+    } else {
+      return this.toggleAutoLoop(deckId, 4);
+    }
+  }
+
+  setManualLoopIn(deckId) {
+    const deck = this.decks[deckId];
+    if (!deck) return;
+    deck.loopStart = this.getCurrentTime(deckId);
+  }
+
+  setManualLoopOut(deckId) {
+    const deck = this.decks[deckId];
+    if (!deck) return;
+    const currentPos = this.getCurrentTime(deckId);
+    if (currentPos > deck.loopStart) {
+      deck.loopEnd = currentPos;
+      deck.isLooping = true;
+      if (deck.sourceNode) {
+        deck.sourceNode.loop = true;
+        deck.sourceNode.loopStart = deck.loopStart;
+        deck.sourceNode.loopEnd = deck.loopEnd;
+      }
+    }
   }
 
   exitLoop(deckId) {
