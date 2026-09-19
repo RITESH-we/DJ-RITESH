@@ -18,6 +18,21 @@
 
 ## 🌟 Key Features
 
+* 🎆 **Real-Time 3D Audio-Reactive Club Visualizer Stage (60 FPS)**:
+  * **Beat & Transient Reactive**: Direct Web Audio API frequency and time-domain analysis (`getMasterBeatMetrics`) measuring instantaneous sub-bass energy, kicks, midrange, treble, and transient attack. The visual canvas pulses, expands, and sends shockwaves on every kick drum and drop!
+  * **Song-Adaptive Graphic Themes (Auto-Vibe Match)**:
+    * `⚡ LASER TUNNEL`: EDM / Festival hyperspace laser tunnel with high-speed kick acceleration and strobe drop flares.
+    * `🔮 CYBER PULSAR`: House / Club rotating 3D geometric wireframe pulsar with bass halo expansion and floating particle clouds.
+    * `🏙️ SUB-BASS RIPPLE`: Hip-Hop / Trap heavy sub-bass floor shockwaves with gritty neon equalizer bars.
+    * `🌌 LIQUID AURORA`: Ambient / Chill harmonic undulating ribbons with deep celestial starfields.
+    * `🌅 80s SYNTHWAVE`: Retro outrun synthwave perspective grid with a bass-bouncing retro sun and horizon glow.
+    * `📊 3D SPECTRUM`: Studio mirrored equalizer matrix with glowing peak-decay floating caps.
+  * **Smart Auto-Switching (`🔀 AUTO`)**: Inspects the on-air song's acoustic profile, genre, and vibe to automatically choose the best visualizer theme.
+  * **Festival Stage Controls**:
+    * `⛶ FULLSCREEN`: Casts a full-screen festival visual projection display onto any TV, projector, or monitor.
+    * `🔥 BASS BOOST`: Overdrives low-end visual sensitivity for massive sub-bass drops.
+    * `Sensitivity Slider`: Fine-tune audio gain responsiveness from `0.5x` to `2.5x`.
+    * `▲ / ▼ Collapsible Header`: Collapse to a sleek 38px neon bar or expand to full stage view.
 * 🔀 **100% Song-Based Intelligent Mixing (Zero Randomness)**:
   * **Acoustic & Harmonic Decision Engine**: The mixer never uses random selections. Instead, every transition technique, crossfader curve, and phrase duration is mathematically and musically derived from the **two songs' acoustic parameters**:
     1. **Harmonic Key Compatibility (Camelot Wheel)**: If keys are identical or adjacent (e.g., $8\text{A} \leftrightarrow 8\text{A}$ or $8\text{A} \leftrightarrow 9\text{A}$ / $8\text{B}$), the engine executes a silky **`Harmonic Long Blend`** with a slow blend curve, allowing chords and melodies to harmonize without dissonance. If keys clash ($8\text{A} \to 2\text{B}$), it automatically performs an **`Echo Out Riser`** or **`Filter Sweep`** to decouple frequencies before the new key lands.
