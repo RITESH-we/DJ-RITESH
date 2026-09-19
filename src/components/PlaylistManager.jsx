@@ -518,7 +518,7 @@ const PlaylistManager = ({
                 >
                   {autoDjState.transitionStyle === 'dynamic' ? (
                     <>
-                      <span>🔀</span> DYNAMIC ROTATION
+                      <span>🔀</span> SONG-BASED SMART ROTATION
                       <span style={{ color: '#88a0bc', fontWeight: 500 }}>• Next Up:</span>
                       <strong style={{ color: '#00ff88' }}>
                         {autoDjState.styleInfo?.icon} {autoDjState.styleInfo?.label}
@@ -531,6 +531,22 @@ const PlaylistManager = ({
                     </>
                   )}
                 </span>
+                {autoDjState.styleReason && (
+                  <span
+                    style={{
+                      fontSize: '9px',
+                      color: '#00ff88',
+                      background: 'rgba(0, 255, 136, 0.1)',
+                      border: '1px solid rgba(0, 255, 136, 0.25)',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 700,
+                    }}
+                    title="Why this transition was chosen for these songs"
+                  >
+                    🎵 {autoDjState.styleReason}
+                  </span>
+                )}
               </div>
 
               {/* Style selection pills */}

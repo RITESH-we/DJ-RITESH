@@ -276,10 +276,31 @@ const MixerCenter = ({
             <span>MIX TECHNIQUE:</span>
             <span style={{ color: '#00f0ff', fontWeight: 800 }}>
               {autoDjState.transitionStyle === 'dynamic'
-                ? `🔀 DYNAMIC (${autoDjState.styleInfo?.shortLabel || 'ROTATING'})`
+                ? `🔀 SONG-SMART (${autoDjState.styleInfo?.shortLabel || 'AUTO'})`
                 : (autoDjState.configuredStyleInfo?.shortLabel || autoDjState.transitionStyle.toUpperCase())}
             </span>
           </div>
+          {autoDjState.styleReason && (
+            <div
+              style={{
+                fontSize: '8px',
+                color: '#00ff88',
+                background: 'rgba(0, 255, 136, 0.08)',
+                border: '1px solid rgba(0, 255, 136, 0.2)',
+                borderRadius: '3px',
+                padding: '2px 4px',
+                textAlign: 'center',
+                margin: '2px 0 4px 0',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                fontWeight: 700,
+              }}
+              title={autoDjState.styleReason}
+            >
+              🎵 {autoDjState.styleReason}
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '3px' }}>
             {[
               { id: 'dynamic', label: '🔀 AUTO', title: 'Dynamic Auto-Rotation (Never sticks to one style!)' },
