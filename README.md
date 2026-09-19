@@ -18,9 +18,18 @@
 
 ## 🌟 Key Features
 
+* 🔀 **Multi-Style Dynamic Adaptive Mixing (Never Sticks to One!)**:
+  * **Intelligent Technique Rotation**: Instead of repeating the same transition over and over, the engine dynamically selects and cycles between 7 distinct club transition techniques:
+    1. **⚡ Pro Bass Swap**: Cuts sub-bass on the outgoing track at 50% progress while incoming kick punches through with zero frequency clash.
+    2. **🌊 Resonant Filter Sweep**: Sweeps high-pass filter to build riser tension before the incoming track drops in full power.
+    3. **🛑 Turntable Vinyl Brake**: Emulates a real turntable power cut / motor stop before slamming into the incoming beat.
+    4. **💥 Drop Slam Cut**: Fast 5-second build-up with a sharp, high-energy cut right onto the incoming drop.
+    5. **✨ Harmonic Long Blend**: Silky 14-second equal-power crossfade with balanced mid layering for melodic transitions.
+    6. **🌀 High-Pass Echo Out**: Delay-like resonance sweep with rhythmic decay tail into the new song.
+    7. **🥁 Rhythmic Beat Roll**: Stutter loop build-up on the outgoing deck right before the drop hits.
+  * **Dynamic Tempo Jump Handling**: When mixing between tracks with large BPM differences ($\Delta \text{BPM} > 8$), the engine automatically prioritizes techniques like Vinyl Brake, Filter Sweep, or Drop Slam to make wide tempo changes sound deliberate, dramatic, and smooth!
 * 🚀 **Continuous Playlist Auto-Beatmixer**:
   * **1-Click Non-Stop Mixing**: Upload any music playlist, audio folder (`.mp3`, `.wav`, `.m4a`, `.flac`, `.ogg`), or Spotify playlist and the engine automatically mixes every single track one-by-one sequentially!
-  * **Pro Bass-Swap & Beat Alignment**: At 50% transition progress, the outgoing bass drops cleanly while the incoming kick punches in, ensuring seamless club-standard transitions with zero clashing.
   * **Real-Time Beat Countdown**: Live countdown displaying seconds and beats remaining until the next transition (`Next Beat-Mix in: 18s / 36 beats`).
   * **Multiple Mix Modes**: Choose between `🎯 Smart Outro` (natural progression), `⚡ 60s Party Cut` (quick-fire bangers), `🎪 90s Festival Cut`, or `🎵 Full Songs`.
   * **One-Touch Override**: Hit `[ ⚡ MIX NEXT SONG NOW ]` anytime to immediately trigger an instantaneous beatmatched blend to the next queued track.

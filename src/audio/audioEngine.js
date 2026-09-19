@@ -260,10 +260,27 @@ class DJAudioEngine {
   pitchBend(deckId, delta) {
     const deck = this.decks[deckId];
     if (!deck || !deck.sourceNode) return;
-    const tempRate = deck.playbackRate + delta;
+    const tempRate = Math.max(0.01, deck.playbackRate + delta);
     const now = this.ctx ? this.ctx.currentTime : 0;
     deck.sourceNode.playbackRate.setValueAtTime(tempRate, now);
     deck.sourceNode.playbackRate.setTargetAtTime(deck.playbackRate, now + 0.25, 0.1);
+  }
+
+  // Turntable Vinyl Brake effect: simulates power cut / motor stop
+  vinylBrake(deckId, durationSec = 1.8) {
+    const deck = this.decks[deckId];
+    if (!deck || !deck.sourceNode || !deck.sourceNode.playbackRate) return;
+    const now = this.ctx ? this.ctx.currentTime : 0;
+    deck.sourceNode.playbackRate.cancelScheduledValues(now);
+    deck.sourceNode.playbackRate.setValueAtTime(deck.playbackRate, now);
+    deck.sourceNode.playbackRate.exponentialRampToValueAtTime(0.005, now + durationSec);
+  }
+
+  // Restores normal playback rate after brake or pitch shifts
+  resetPlaybackRate(deckId) {
+    const deck = this.decks[deckId];
+    if (!deck) return;
+    this.setPitchPercent(deckId, deck.pitchPercent || 0);
   }
 
   // Sync deck to other deck BPM

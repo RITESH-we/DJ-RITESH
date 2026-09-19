@@ -236,19 +236,29 @@ const MixerCenter = ({
 
         {/* Transition Style Selector */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#7a8799', fontWeight: 700 }}>
-            <span>STYLE:</span>
-            <span>{autoDjState.transitionStyle.toUpperCase()}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9px', color: '#7a8799', fontWeight: 700 }}>
+            <span>MIX TECHNIQUE:</span>
+            <span style={{ color: '#00f0ff', fontWeight: 800 }}>
+              {autoDjState.transitionStyle === 'dynamic'
+                ? `🔀 DYNAMIC (${autoDjState.styleInfo?.shortLabel || 'ROTATING'})`
+                : (autoDjState.configuredStyleInfo?.shortLabel || autoDjState.transitionStyle.toUpperCase())}
+            </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '3px' }}>
             {[
-              { id: 'bassSwap', label: 'BASS SWAP' },
-              { id: 'filterSweep', label: 'FILTER' },
-              { id: 'equalPower', label: 'FADE' },
+              { id: 'dynamic', label: '🔀 AUTO', title: 'Dynamic Auto-Rotation (Never sticks to one style!)' },
+              { id: 'bassSwap', label: '⚡ BASS', title: 'Sub-Bass Swap' },
+              { id: 'filterSweep', label: '🌊 FILTER', title: 'High-Pass Filter Sweep' },
+              { id: 'vinylBrake', label: '🛑 BRAKE', title: 'Turntable Motor Brake' },
+              { id: 'dropCut', label: '💥 SLAM', title: 'Fast Drop Slam Cut' },
+              { id: 'harmonicBlend', label: '✨ BLEND', title: 'Harmonic Long Blend' },
+              { id: 'echoFade', label: '🌀 ECHO', title: 'Echo Out Riser' },
+              { id: 'beatRoll', label: '🥁 ROLL', title: 'Rhythmic Beat Roll Stutter' },
             ].map((style) => (
               <button
                 key={style.id}
                 onClick={() => autoDjEngine.setTransitionStyle(style.id)}
+                title={style.title}
                 style={{
                   background: autoDjState.transitionStyle === style.id ? '#2a3449' : '#171a24',
                   color: autoDjState.transitionStyle === style.id ? '#00f0ff' : '#7a8698',
@@ -258,6 +268,7 @@ const MixerCenter = ({
                   fontSize: '8px',
                   fontWeight: 700,
                   cursor: 'pointer',
+                  textAlign: 'center',
                 }}
               >
                 {style.label}

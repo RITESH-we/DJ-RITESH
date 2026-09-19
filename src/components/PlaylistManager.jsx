@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import audioEngine from '../audio/audioEngine';
-import autoDjEngine from '../audio/autoDjEngine';
+import autoDjEngine, { TRANSITION_STYLES_INFO } from '../audio/autoDjEngine';
 
 const PlaylistManager = ({
   playlist = [],
@@ -26,6 +26,7 @@ const PlaylistManager = ({
   const [autoDjState, setAutoDjState] = useState(autoDjEngine.getState());
   const [selectedMixMode, setSelectedMixMode] = useState('smartOutro');
   const [selectedSort, setSelectedSort] = useState('none'); // 'none' | 'bpm' | 'harmonic'
+  const [selectedStyle, setSelectedStyle] = useState('dynamic'); // 'dynamic' default: cycles multiple styles
   const [transitionSec, setTransitionSec] = useState(10);
   const [loopPlaylist, setLoopPlaylist] = useState(true);
 
@@ -103,6 +104,7 @@ const PlaylistManager = ({
       finalTracks.sort((a, b) => (a.bpm || 120) - (b.bpm || 120));
     }
 
+    autoDjEngine.setTransitionStyle(selectedStyle);
     autoDjEngine.setTransitionDuration(transitionSec);
     autoDjEngine.setMixMode(selectedMixMode);
     autoDjEngine.setLoopPlaylist(loopPlaylist);
@@ -112,6 +114,7 @@ const PlaylistManager = ({
         mixMode: selectedMixMode,
         bpmSort: selectedSort === 'bpm',
         harmonicSort: selectedSort === 'harmonic',
+        transitionStyle: selectedStyle,
       });
     }
   };
@@ -430,8 +433,8 @@ const PlaylistManager = ({
 
             {/* Quick Live Mix Controls: Mode, Style, Loop */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#8a99ac' }}>
-                <span>MIX MODE:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#8a99ac', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 800 }}>CUT MODE:</span>
                 {[
                   { id: 'smartOutro', label: '🎯 Smart Outro' },
                   { id: 'quick60', label: '⚡ 60s Party Cut' },
@@ -477,10 +480,83 @@ const PlaylistManager = ({
                 >
                   🔁 Loop Playlist: {autoDjState.loopPlaylist ? 'ON' : 'OFF'}
                 </button>
+              </div>
+            </div>
 
-                <span style={{ fontSize: '10px', color: '#7a889b' }}>
-                  Style: <strong style={{ color: '#00f0ff' }}>{autoDjState.transitionStyle.toUpperCase()}</strong> ({autoDjState.transitionDurationSec}s)
+            {/* Dynamic Mixing Style & Next Technique Indicator Bar */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+                marginTop: '10px',
+                padding: '8px 12px',
+                background: '#0d111a',
+                borderRadius: '6px',
+                border: '1px solid #1c2538',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '10px', fontWeight: 800, color: '#7a8ba0' }}>MIX TECHNIQUE:</span>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 900,
+                    background: autoDjState.transitionStyle === 'dynamic'
+                      ? 'linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(123, 0, 255, 0.2) 100%)'
+                      : 'rgba(255, 0, 119, 0.15)',
+                    color: autoDjState.transitionStyle === 'dynamic' ? '#00f0ff' : '#ff0077',
+                    border: `1px solid ${autoDjState.transitionStyle === 'dynamic' ? '#00f0ff88' : '#ff007788'}`,
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  {autoDjState.transitionStyle === 'dynamic' ? (
+                    <>
+                      <span>🔀</span> DYNAMIC ROTATION
+                      <span style={{ color: '#88a0bc', fontWeight: 500 }}>• Next Up:</span>
+                      <strong style={{ color: '#00ff88' }}>
+                        {autoDjState.styleInfo?.icon} {autoDjState.styleInfo?.label}
+                      </strong>
+                    </>
+                  ) : (
+                    <>
+                      <span>{autoDjState.styleInfo?.icon}</span>
+                      <strong>{autoDjState.styleInfo?.label}</strong>
+                    </>
+                  )}
                 </span>
+              </div>
+
+              {/* Style selection pills */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                {Object.values(TRANSITION_STYLES_INFO).map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      autoDjEngine.setTransitionStyle(s.id);
+                      setSelectedStyle(s.id);
+                    }}
+                    title={s.desc}
+                    style={{
+                      background: autoDjState.transitionStyle === s.id ? '#253247' : '#131822',
+                      color: autoDjState.transitionStyle === s.id ? '#00f0ff' : '#6b798e',
+                      border: `1px solid ${autoDjState.transitionStyle === s.id ? '#00f0ff' : '#222b3a'}`,
+                      borderRadius: '3px',
+                      padding: '2px 6px',
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {s.icon} {s.shortLabel}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -634,6 +710,56 @@ const PlaylistManager = ({
                     }}
                   >
                     {sec}s
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mix Technique Selection Row */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginTop: '10px',
+                paddingTop: '8px',
+                borderTop: '1px solid #18202f',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 900, color: '#00f0ff', letterSpacing: '0.5px' }}>
+                  MIX TECHNIQUE:
+                </span>
+                <span style={{ fontSize: '9px', color: '#8899aa' }}>
+                  (Dynamic rotates techniques every song so your mix never sounds repetitive!)
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                {Object.values(TRANSITION_STYLES_INFO).map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setSelectedStyle(s.id);
+                      autoDjEngine.setTransitionStyle(s.id);
+                    }}
+                    title={s.desc}
+                    style={{
+                      background: selectedStyle === s.id
+                        ? (s.id === 'dynamic' ? 'linear-gradient(135deg, #00f0ff 0%, #7b00ff 100%)' : '#ff0077')
+                        : '#141824',
+                      color: selectedStyle === s.id ? (s.id === 'dynamic' ? '#000' : '#fff') : '#8ba0b8',
+                      border: `1px solid ${selectedStyle === s.id ? (s.id === 'dynamic' ? '#00f0ff' : '#ff0077') : '#222b3d'}`,
+                      borderRadius: '4px',
+                      padding: '4px 9px',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: selectedStyle === s.id && s.id === 'dynamic' ? '0 0 10px rgba(0, 240, 255, 0.4)' : 'none',
+                    }}
+                  >
+                    {s.icon} {s.shortLabel}
                   </button>
                 ))}
               </div>
