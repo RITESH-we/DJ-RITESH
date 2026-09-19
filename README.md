@@ -59,6 +59,19 @@
 * 🟢 **Spotify VIP & Personal OAuth Library**:
   * **Instant 1-Click VIP Pro Access**: Instant access to curated playlists, global top charts, and search across 100M+ tracks.
   * **Personal Account Link**: Connect your personal Spotify account via OAuth 2.0 PKCE to spin your private playlists.
+* 🎛️ **Pro Club Crossfader & Motorized Auto-Glide**:
+  * **6 Pro Crossfader Curve Profiles**:
+    1. **`EQUAL POWER`**: Constant acoustic loudness ($cos$/$sin$ power balance) — ideal for seamless electronic and club transitions without perceived volume dip.
+    2. **`LINEAR`**: Direct 1-to-1 mathematical linear fader volume attenuation.
+    3. **`SCRATCH CUT`**: Ultra-sharp 6% cut-in lag threshold engineered specifically for battle DJs, crab scratching, and chirps.
+    4. **`DIP / DROP`**: $-3\text{ dB}$ center gain dip to prevent master limiter distortion and acoustic crowding during dual drops.
+    5. **`SLOW BLEND`**: Extended parabolic gentle curve for progressive house and deep melodic blends.
+    6. **`THRU / BYPASS`**: Completely bypasses the crossfader (both Deck A and Deck B output at 100% master gain).
+  * **🐹 Battle DJ Hamster Reverse**: Instant hardware flip switch that inverts Deck A and Deck B fader positions — battle turntablist standard!
+  * **⚡ Motorized Smooth Auto-Glide**: Automated physical glide with selectable durations (`1s` whip, `2s` club, `4s` blend, `8s` harmonic) with instant stop/abort.
+  * **📊 Real-Time Dynamic Balance & Dual Signal Meter**: Live numerical readout (`◀ BIAS DECK A 75% • DECK B 25%` or `⚪ CENTER 50 / 50`) paired with dual responsive attenuation level bars.
+  * **⚡ One-Touch Slam Cut & Center Snap**: Instant tactile buttons for `[ ◀ CUT A ]`, `[ ⚪ CENTER (50/50) ]`, and `[ CUT B ▶ ]`.
+  * **Precision Hardware Scale Track**: Cyberpunk glowing gradient fader rail with center detent notch indicator and $0\%$, $25\%$, $50\%$, $75\%$, $100\%$ calibration ticks.
 * 🔊 **Studio-Grade DSP Processing Strip**:
   * 3-Band isolator EQ with complete kill switches ($-24\text{ dB}$ to $+6\text{ dB}$).
   * Bi-directional resonant sweep filter (Low-Pass $\leftrightarrow$ High-Pass).
@@ -124,11 +137,18 @@ Click **`🔑 Verify Device`** (or open the Spotify modal):
 | Shortcut | Action | Description |
 | :---: | :--- | :--- |
 | <kbd>SPACE</kbd> | **Play / Pause** | Toggles playback on the active deck |
-| <kbd>TAB</kbd> | **Mix Now** | Triggers instantaneous smart auto-transition |
-| <kbd>◄</kbd> | **Crossfader Left** | Moves crossfader toward Deck A |
-| <kbd>►</kbd> | **Crossfader Right** | Moves crossfader toward Deck B |
-| <kbd>1</kbd> - <kbd>4</kbd> | **Hot Cues A** | Jump to drop cue points on Deck A |
-| <kbd>5</kbd> - <kbd>8</kbd> | **Hot Cues B** | Jump to drop cue points on Deck B |
+| <kbd>TAB</kbd> | **Mix Now** | Triggers instantaneous smart auto-transition to next track |
+| <kbd>◄</kbd> | **Nudge Fader Left** | Nudges crossfader toward Deck A by 5% |
+| <kbd>►</kbd> | **Nudge Fader Right** | Nudges crossfader toward Deck B by 5% |
+| <kbd>Shift</kbd> + <kbd>◄</kbd> | **Cut to Deck A** | Instantly slams crossfader to 100% Deck A |
+| <kbd>Shift</kbd> + <kbd>►</kbd> | **Cut to Deck B** | Instantly slams crossfader to 100% Deck B |
+| <kbd>▼</kbd> | **Center Fader** | Snaps crossfader directly to center notch (50/50) |
+| <kbd>X</kbd> | **Hamster Reverse** | Toggles battle DJ Hamster Reverse fader inversion |
+| <kbd>L</kbd> | **Auto-Loop 4** | Sets or exits active 4-beat quantized loop |
+| <kbd>[</kbd> | **Halve Loop (½x)** | Cuts active loop length in half (buildup riser) |
+| <kbd>]</kbd> | **Double Loop (2x)** | Doubles active loop length |
+| <kbd>1</kbd> - <kbd>4</kbd> | **Hot Cues 1-4 (Deck A)** | Jump to / set hot cue landmark on Deck A |
+| <kbd>5</kbd> - <kbd>8</kbd> | **Hot Cues 1-4 (Deck B)** | Jump to / set hot cue landmark on Deck B |
 
 ---
 

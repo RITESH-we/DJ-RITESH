@@ -91,6 +91,14 @@ const App = () => {
     audioEngine.updateCrossfader(val);
   };
 
+  // Keep crossfadeVal state synchronized during motorized glide & Auto-DJ transitions
+  useEffect(() => {
+    const unsub = audioEngine.subscribeCrossfade((val) => {
+      setCrossfadeVal(val);
+    });
+    return unsub;
+  }, []);
+
   const handleLoadToDeck = (deckId, track) => {
     if (deckId === 'queue') {
       handleAddSpotifyTrack(track);
@@ -121,9 +129,25 @@ const App = () => {
         e.preventDefault();
         autoDjEngine.triggerTransition();
       } else if (e.code === 'ArrowLeft') {
-        handleCrossfadeChange(Math.max(0, crossfadeVal - 0.05));
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleCrossfadeChange(0); // Cut to Deck A
+        } else {
+          handleCrossfadeChange(Math.max(0, crossfadeVal - 0.05));
+        }
       } else if (e.code === 'ArrowRight') {
-        handleCrossfadeChange(Math.min(1, crossfadeVal + 0.05));
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleCrossfadeChange(1); // Cut to Deck B
+        } else {
+          handleCrossfadeChange(Math.min(1, crossfadeVal + 0.05));
+        }
+      } else if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        handleCrossfadeChange(0.5); // Snap to Center (50/50)
+      } else if (e.code === 'KeyX') {
+        e.preventDefault();
+        audioEngine.toggleHamsterReverse(); // Toggle Hamster reverse fader
       } else if (e.code === 'KeyL') {
         e.preventDefault();
         const activeId = autoDjEngine.activeDeckId || 'A';

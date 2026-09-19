@@ -13,11 +13,26 @@ const MixerCenter = ({
   const [masterLevels, setMasterLevels] = useState({ peak: 0, rms: 0 });
   const [autoDjState, setAutoDjState] = useState(autoDjEngine.getState());
 
+  // Pro Crossfader state
+  const [slideDuration, setSlideDuration] = useState(2);
+  const [isSliding, setIsSliding] = useState(audioEngine.isCrossfadeSliding);
+  const [hamsterReverse, setHamsterReverse] = useState(audioEngine.isHamsterReverse);
+  const [crossfadeGains, setCrossfadeGains] = useState({ gainA: 0.707, gainB: 0.707 });
+
   const animFrameRef = useRef(null);
 
   useEffect(() => {
     const unsub = autoDjEngine.subscribe((state) => {
       setAutoDjState(state);
+    });
+    return unsub;
+  }, []);
+
+  // Listen to crossfader changes from user, auto-glide, or Auto-DJ
+  useEffect(() => {
+    const unsub = audioEngine.subscribeCrossfade((val, gA, gB) => {
+      setCrossfadeGains({ gainA: gA, gainB: gB });
+      setIsSliding(audioEngine.isCrossfadeSliding);
     });
     return unsub;
   }, []);
@@ -39,6 +54,27 @@ const MixerCenter = ({
   const handleCurveChange = (newCurve) => {
     setCurve(newCurve);
     audioEngine.setCrossfadeCurve(newCurve);
+  };
+
+  const handleSnap = (val) => {
+    audioEngine.cancelCrossfadeSlide();
+    setIsSliding(false);
+    onCrossfadeChange(val);
+  };
+
+  const handleSmoothGlide = (targetVal) => {
+    setIsSliding(true);
+    audioEngine.smoothSlideCrossfader(targetVal, slideDuration);
+  };
+
+  const handleStopGlide = () => {
+    audioEngine.cancelCrossfadeSlide();
+    setIsSliding(false);
+  };
+
+  const handleToggleHamster = () => {
+    const newRev = audioEngine.toggleHamsterReverse();
+    setHamsterReverse(newRev);
   };
 
   const handleToggleAutoDj = () => {
@@ -303,75 +339,375 @@ const MixerCenter = ({
         </div>
       </div>
 
-      {/* Bottom: CROSSFADER & CURVE SELECTOR */}
+      {/* Bottom: PRO CROSSFADER CONSOLE */}
       <div style={{ width: '100%', borderTop: '1px solid #1f2638', paddingTop: '8px' }}>
+        {/* Header with Channel Indicators & Hamster Reverse Switch */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <span style={{ fontSize: '9px', fontWeight: 800, color: '#00f0ff', letterSpacing: '0.5px' }}>◀ DECK A</span>
-          <span style={{ fontSize: '9px', fontWeight: 800, color: '#7a8799' }}>CROSSFADER</span>
-          <span style={{ fontSize: '9px', fontWeight: 800, color: '#ff0077', letterSpacing: '0.5px' }}>DECK B ▶</span>
-        </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '10px', fontWeight: 900, color: '#00f0ff', letterSpacing: '0.5px' }}>
+              ◀ DECK A
+            </span>
+            <span style={{ fontSize: '8px', color: '#68778d', fontWeight: 700 }}>
+              ({Math.round(crossfadeGains.gainA * 100)}%)
+            </span>
+          </div>
 
-        {/* Crossfader Slider */}
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={crossfadeValue}
-          onChange={(e) => onCrossfadeChange(parseFloat(e.target.value))}
-          style={{
-            width: '100%',
-            height: '14px',
-            cursor: 'pointer',
-            accentColor: crossfadeValue < 0.45 ? '#00f0ff' : crossfadeValue > 0.55 ? '#ff0077' : '#ffffff',
-          }}
-        />
-
-        {/* Quick Position Snap Buttons */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-          <button
-            onClick={() => onCrossfadeChange(0)}
-            style={{ background: '#161922', border: '1px solid #283042', color: '#00f0ff', fontSize: '9px', padding: '2px 6px', borderRadius: '3px', cursor: 'pointer' }}
-          >
-            A (100%)
-          </button>
-          <button
-            onClick={() => onCrossfadeChange(0.5)}
-            style={{ background: '#161922', border: '1px solid #283042', color: '#fff', fontSize: '9px', padding: '2px 6px', borderRadius: '3px', cursor: 'pointer' }}
-          >
-            CENTER
-          </button>
-          <button
-            onClick={() => onCrossfadeChange(1)}
-            style={{ background: '#161922', border: '1px solid #283042', color: '#ff0077', fontSize: '9px', padding: '2px 6px', borderRadius: '3px', cursor: 'pointer' }}
-          >
-            B (100%)
-          </button>
-        </div>
-
-        {/* Curve Mode */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '6px' }}>
-          {[
-            { id: 'equalPower', label: 'EQUAL POWER' },
-            { id: 'linear', label: 'LINEAR' },
-            { id: 'cut', label: 'SCRATCH CUT' },
-          ].map((c) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 900, color: '#8fa0b5', letterSpacing: '0.8px', fontFamily: 'Orbitron, sans-serif' }}>
+              CROSSFADER
+            </span>
             <button
-              key={c.id}
-              onClick={() => handleCurveChange(c.id)}
+              onClick={handleToggleHamster}
+              title="Hamster Reverse: Inverts Deck A and Deck B fader assignment (Scratch battle standard)"
               style={{
+                background: hamsterReverse ? 'linear-gradient(135deg, #ff9900 0%, #ff5500 100%)' : '#181c28',
+                color: hamsterReverse ? '#000000' : '#8899aa',
+                border: `1px solid ${hamsterReverse ? '#ffaa00' : '#2a3449'}`,
+                borderRadius: '3px',
+                padding: '2px 5px',
                 fontSize: '8px',
-                fontWeight: 700,
-                padding: '2px 4px',
-                background: curve === c.id ? '#2a3346' : 'transparent',
-                color: curve === c.id ? '#00f0ff' : '#6b778a',
-                border: 'none',
+                fontWeight: 900,
                 cursor: 'pointer',
+                letterSpacing: '0.5px',
+                boxShadow: hamsterReverse ? '0 0 10px rgba(255, 153, 0, 0.6)' : 'none',
+                transition: 'all 0.2s',
               }}
             >
-              {c.label}
+              🐹 {hamsterReverse ? 'REV ON' : 'HAMSTER'}
             </button>
-          ))}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '8px', color: '#68778d', fontWeight: 700 }}>
+              ({Math.round(crossfadeGains.gainB * 100)}%)
+            </span>
+            <span style={{ fontSize: '10px', fontWeight: 900, color: '#ff0077', letterSpacing: '0.5px' }}>
+              DECK B ▶
+            </span>
+          </div>
+        </div>
+
+        {/* Real-time Dynamic Balance Display & Dual Energy Bar */}
+        <div
+          style={{
+            background: '#0e111a',
+            border: '1px solid #1c2333',
+            borderRadius: '5px',
+            padding: '4px 6px',
+            marginBottom: '6px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '3px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9px', fontWeight: 800 }}>
+            <span style={{ color: '#00f0ff' }}>
+              A: {Math.round((1 - crossfadeValue) * 100)}%
+            </span>
+            <span
+              style={{
+                color: Math.abs(crossfadeValue - 0.5) < 0.03 ? '#ffffff' : crossfadeValue < 0.5 ? '#00f0ff' : '#ff0077',
+                fontFamily: 'monospace',
+                fontSize: '9px',
+                letterSpacing: '0.5px',
+                fontWeight: 900,
+              }}
+            >
+              {Math.abs(crossfadeValue - 0.5) < 0.03
+                ? '⚪ CENTER 50 / 50'
+                : crossfadeValue < 0.5
+                ? `◀ BIAS DECK A (${Math.round((1 - crossfadeValue) * 100)}%)`
+                : `BIAS DECK B (${Math.round(crossfadeValue * 100)}%) ▶`}
+            </span>
+            <span style={{ color: '#ff0077' }}>
+              B: {Math.round(crossfadeValue * 100)}%
+            </span>
+          </div>
+
+          {/* Dual Attenuation Signal Level Bars */}
+          <div style={{ display: 'flex', width: '100%', height: '4px', backgroundColor: '#141824', borderRadius: '2px', overflow: 'hidden', gap: '1px' }}>
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', backgroundColor: '#10141f' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${Math.min(100, Math.round(crossfadeGains.gainA * 100))}%`,
+                  background: 'linear-gradient(90deg, #0088cc, #00f0ff)',
+                  boxShadow: '0 0 6px rgba(0, 240, 255, 0.4)',
+                  transition: 'width 0.05s ease',
+                }}
+              />
+            </div>
+            <div style={{ width: '2px', height: '100%', backgroundColor: '#ffffff' }} />
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', backgroundColor: '#10141f' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${Math.min(100, Math.round(crossfadeGains.gainB * 100))}%`,
+                  background: 'linear-gradient(90deg, #ff0077, #ff55aa)',
+                  boxShadow: '0 0 6px rgba(255, 0, 119, 0.4)',
+                  transition: 'width 0.05s ease',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Hardware Fader Track with Center Detent and Tick Markers */}
+        <div style={{ position: 'relative', width: '100%', padding: '0 2px' }}>
+          {/* Tick Marks */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 6px', marginBottom: '2px' }}>
+            {['0%', '25%', '50%', '75%', '100%'].map((t, idx) => (
+              <span
+                key={t}
+                style={{
+                  fontSize: '7px',
+                  fontWeight: idx === 2 ? 900 : 700,
+                  color: idx === 2 ? '#ffffff' : '#57667a',
+                  transform: idx === 0 ? 'translateX(-2px)' : idx === 4 ? 'translateX(2px)' : 'none',
+                }}
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+
+          {/* Crossfader Range Input Slider */}
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.005"
+            value={crossfadeValue}
+            onChange={(e) => {
+              if (audioEngine.isCrossfadeSliding) {
+                audioEngine.cancelCrossfadeSlide();
+              }
+              onCrossfadeChange(parseFloat(e.target.value));
+            }}
+            className="pro-crossfader-slider"
+          />
+
+          {/* Center Detent Marker Notch Indicator */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '21px',
+              width: '2px',
+              height: '10px',
+              backgroundColor: '#ffffff',
+              transform: 'translateX(-50%)',
+              pointerEvents: 'none',
+              opacity: 0.8,
+              boxShadow: '0 0 4px #ffffff',
+            }}
+          />
+        </div>
+
+        {/* Quick Cut & Center Snap Controls */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', marginTop: '6px' }}>
+          <button
+            onClick={() => handleSnap(0)}
+            style={{
+              background: '#151924',
+              border: `1px solid ${crossfadeValue === 0 ? '#00f0ff' : '#232c3f'}`,
+              color: '#00f0ff',
+              fontSize: '9px',
+              fontWeight: 800,
+              padding: '5px 2px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              boxShadow: crossfadeValue === 0 ? '0 0 8px rgba(0, 240, 255, 0.4)' : 'none',
+            }}
+            title="Instant Cut to Deck A (100%)"
+          >
+            ◀ CUT A
+          </button>
+          <button
+            onClick={() => handleSnap(0.5)}
+            style={{
+              background: '#151924',
+              border: `1px solid ${Math.abs(crossfadeValue - 0.5) < 0.02 ? '#ffffff' : '#232c3f'}`,
+              color: '#ffffff',
+              fontSize: '9px',
+              fontWeight: 800,
+              padding: '5px 2px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              boxShadow: Math.abs(crossfadeValue - 0.5) < 0.02 ? '0 0 8px rgba(255, 255, 255, 0.4)' : 'none',
+            }}
+            title="Snap to Center Notch (50/50)"
+          >
+            ⚪ CENTER
+          </button>
+          <button
+            onClick={() => handleSnap(1)}
+            style={{
+              background: '#151924',
+              border: `1px solid ${crossfadeValue === 1 ? '#ff0077' : '#232c3f'}`,
+              color: '#ff0077',
+              fontSize: '9px',
+              fontWeight: 800,
+              padding: '5px 2px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              boxShadow: crossfadeValue === 1 ? '0 0 8px rgba(255, 0, 119, 0.4)' : 'none',
+            }}
+            title="Instant Cut to Deck B (100%)"
+          >
+            CUT B ▶
+          </button>
+        </div>
+
+        {/* Motorized Smooth Auto-Glide */}
+        <div
+          style={{
+            marginTop: '6px',
+            background: '#10131c',
+            border: '1px solid #1c2333',
+            borderRadius: '5px',
+            padding: '4px 6px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '8px', fontWeight: 800, color: '#7a8799', letterSpacing: '0.5px' }}>
+              ⚡ MOTORIZED AUTO-GLIDE:
+            </span>
+            <div style={{ display: 'flex', gap: '3px' }}>
+              {[1, 2, 4, 8].map((sec) => (
+                <button
+                  key={sec}
+                  onClick={() => setSlideDuration(sec)}
+                  style={{
+                    background: slideDuration === sec ? '#00f0ff22' : '#161924',
+                    color: slideDuration === sec ? '#00f0ff' : '#6b778a',
+                    border: `1px solid ${slideDuration === sec ? '#00f0ff' : '#232a3a'}`,
+                    borderRadius: '2px',
+                    padding: '1px 4px',
+                    fontSize: '8px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                  title={`Glide duration ${sec} seconds`}
+                >
+                  {sec}s
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              onClick={() => handleSmoothGlide(0)}
+              disabled={isSliding && crossfadeValue <= 0.01}
+              style={{
+                flex: 1,
+                background: isSliding && crossfadeValue > 0.05 ? 'rgba(0, 240, 255, 0.25)' : '#141824',
+                color: '#00f0ff',
+                border: '1px solid #00f0ff55',
+                borderRadius: '3px',
+                fontSize: '8px',
+                fontWeight: 800,
+                padding: '4px',
+                cursor: 'pointer',
+              }}
+              title={`Smoothly glide crossfader towards Deck A over ${slideDuration}s`}
+            >
+              ◀ SLIDE TO A
+            </button>
+
+            {isSliding && (
+              <button
+                onClick={handleStopGlide}
+                style={{
+                  background: '#ff0033',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '3px',
+                  fontSize: '8px',
+                  fontWeight: 900,
+                  padding: '4px 6px',
+                  cursor: 'pointer',
+                  boxShadow: '0 0 8px rgba(255, 0, 51, 0.6)',
+                }}
+                title="Stop active glide immediately"
+              >
+                STOP
+              </button>
+            )}
+
+            <button
+              onClick={() => handleSmoothGlide(1)}
+              disabled={isSliding && crossfadeValue >= 0.99}
+              style={{
+                flex: 1,
+                background: isSliding && crossfadeValue < 0.95 ? 'rgba(255, 0, 119, 0.25)' : '#141824',
+                color: '#ff0077',
+                border: '1px solid #ff007755',
+                borderRadius: '3px',
+                fontSize: '8px',
+                fontWeight: 800,
+                padding: '4px',
+                cursor: 'pointer',
+              }}
+              title={`Smoothly glide crossfader towards Deck B over ${slideDuration}s`}
+            >
+              SLIDE TO B ▶
+            </button>
+          </div>
+        </div>
+
+        {/* Pro Curve Profiles */}
+        <div style={{ marginTop: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+            <span style={{ fontSize: '8px', fontWeight: 800, color: '#7a8799' }}>CURVE PROFILE:</span>
+            <span style={{ fontSize: '8px', fontWeight: 800, color: '#00f0ff' }}>
+              {curve === 'equalPower'
+                ? 'EQUAL PWR'
+                : curve === 'linear'
+                ? 'LINEAR'
+                : curve === 'cut'
+                ? 'SCRATCH CUT'
+                : curve === 'dip'
+                ? 'DIP (-3dB)'
+                : curve === 'slowBlend'
+                ? 'SLOW BLEND'
+                : 'THRU'}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
+            {[
+              { id: 'equalPower', label: 'EQUAL PWR', title: 'Equal Power: Constant acoustic loudness (Industry Standard for EDM/Club)' },
+              { id: 'linear', label: 'LINEAR', title: 'Linear: Direct 1-to-1 fader volume fade' },
+              { id: 'cut', label: 'SCRATCH', title: 'Scratch Cut: Ultra-sharp 6% cut-in threshold for battle/scratching' },
+              { id: 'dip', label: 'DIP / DROP', title: 'Dip / Club Drop: Lowers center loudness to avoid limiter distortion' },
+              { id: 'slowBlend', label: 'SLOW BLEND', title: 'Slow Blend: Extended gentle curve for deep/progressive sets' },
+              { id: 'thru', label: 'THRU', title: 'Thru / Bypass: Crossfader disabled, both decks at full volume' },
+            ].map((c) => (
+              <button
+                key={c.id}
+                onClick={() => handleCurveChange(c.id)}
+                title={c.title}
+                style={{
+                  fontSize: '8px',
+                  fontWeight: 700,
+                  padding: '3px 2px',
+                  background: curve === c.id ? '#2a3346' : '#141722',
+                  color: curve === c.id ? '#00f0ff' : '#6b778a',
+                  border: `1px solid ${curve === c.id ? '#00f0ff88' : '#222938'}`,
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

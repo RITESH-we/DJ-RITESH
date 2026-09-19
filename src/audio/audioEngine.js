@@ -7,7 +7,11 @@ class DJAudioEngine {
     this.masterGain = null;
     this.masterAnalyser = null;
     this.crossfadeValue = 0.5; // 0 = Deck A, 1 = Deck B
-    this.crossfadeCurve = 'equalPower'; // 'equalPower' | 'linear' | 'cut'
+    this.crossfadeCurve = 'equalPower'; // 'equalPower' | 'linear' | 'cut' | 'dip' | 'slowBlend' | 'thru'
+    this.isHamsterReverse = false; // Battle DJ Hamster Reverse switch
+    this._crossfadeListeners = new Set();
+    this._crossfadeSlideFrame = null;
+    this.isCrossfadeSliding = false;
 
     this.decks = {
       A: this._createDeckState('A'),
@@ -146,7 +150,7 @@ class DJAudioEngine {
     deck.crossfadeGain.connect(this.masterGain);
   }
 
-  // Crossfader curves
+  // Crossfader curves and routing
   updateCrossfader(value) {
     this.crossfadeValue = Math.max(0, Math.min(1, value));
     if (!this.decks.A.crossfadeGain || !this.decks.B.crossfadeGain) return;
@@ -154,27 +158,125 @@ class DJAudioEngine {
     let gainA = 1.0;
     let gainB = 1.0;
 
-    if (this.crossfadeCurve === 'equalPower') {
-      // Equal power curve maintains constant energy across mix
-      gainA = Math.cos(this.crossfadeValue * 0.5 * Math.PI);
-      gainB = Math.sin(this.crossfadeValue * 0.5 * Math.PI);
-    } else if (this.crossfadeCurve === 'linear') {
-      gainA = 1 - this.crossfadeValue;
-      gainB = this.crossfadeValue;
-    } else if (this.crossfadeCurve === 'cut') {
-      // Scratch/cut curve: full volume until extreme ends
-      gainA = this.crossfadeValue > 0.95 ? 0 : 1;
-      gainB = this.crossfadeValue < 0.05 ? 0 : 1;
+    // Apply Hamster Reverse if active (Deck A and B positions swapped)
+    const effectiveVal = this.isHamsterReverse ? (1 - this.crossfadeValue) : this.crossfadeValue;
+
+    switch (this.crossfadeCurve) {
+      case 'equalPower':
+        // Constant acoustic loudness curve (cos/sin, standard for electronic dance music)
+        gainA = Math.cos(effectiveVal * 0.5 * Math.PI);
+        gainB = Math.sin(effectiveVal * 0.5 * Math.PI);
+        break;
+
+      case 'linear':
+        // Direct linear crossfade
+        gainA = 1 - effectiveVal;
+        gainB = effectiveVal;
+        break;
+
+      case 'cut':
+        // Ultra-sharp scratch cut with 6% cut-in threshold for battle/turntablism DJs
+        gainA = effectiveVal > 0.94 ? 0 : 1;
+        gainB = effectiveVal < 0.06 ? 0 : 1;
+        break;
+
+      case 'dip':
+        // Club Drop / Headroom Dip: -3dB dip in the middle to prevent master clipping during dual drops
+        gainA = Math.pow(1 - effectiveVal, 0.7);
+        gainB = Math.pow(effectiveVal, 0.7);
+        break;
+
+      case 'slowBlend':
+        // Extended long blend curve for deep house and progressive mixes
+        gainA = Math.cos(Math.pow(effectiveVal, 1.4) * 0.5 * Math.PI);
+        gainB = Math.sin(Math.pow(effectiveVal, 0.6) * 0.5 * Math.PI);
+        break;
+
+      case 'thru':
+        // Bypass crossfader: both channels pass straight through at full level
+        gainA = 1.0;
+        gainB = 1.0;
+        break;
+
+      default:
+        gainA = Math.cos(effectiveVal * 0.5 * Math.PI);
+        gainB = Math.sin(effectiveVal * 0.5 * Math.PI);
+        break;
     }
 
     const now = this.ctx ? this.ctx.currentTime : 0;
     this.decks.A.crossfadeGain.gain.setValueAtTime(gainA, now);
     this.decks.B.crossfadeGain.gain.setValueAtTime(gainB, now);
+
+    // Broadcast update to all registered UI subscribers
+    this._crossfadeListeners.forEach((listener) => {
+      try {
+        listener(this.crossfadeValue, gainA, gainB);
+      } catch (err) {
+        console.error('Crossfade subscriber callback error:', err);
+      }
+    });
   }
 
   setCrossfadeCurve(curve) {
     this.crossfadeCurve = curve;
     this.updateCrossfader(this.crossfadeValue);
+  }
+
+  setHamsterReverse(reversed) {
+    this.isHamsterReverse = !!reversed;
+    this.updateCrossfader(this.crossfadeValue);
+    return this.isHamsterReverse;
+  }
+
+  toggleHamsterReverse() {
+    this.isHamsterReverse = !this.isHamsterReverse;
+    this.updateCrossfader(this.crossfadeValue);
+    return this.isHamsterReverse;
+  }
+
+  subscribeCrossfade(listener) {
+    this._crossfadeListeners.add(listener);
+    return () => {
+      this._crossfadeListeners.delete(listener);
+    };
+  }
+
+  // Motorized smooth auto-glide to target position over specified duration
+  smoothSlideCrossfader(targetVal, durationSec = 2) {
+    this.cancelCrossfadeSlide();
+    const startVal = this.crossfadeValue;
+    const endVal = Math.max(0, Math.min(1, targetVal));
+    const durationMs = Math.max(150, durationSec * 1000);
+    const startTime = performance.now();
+    this.isCrossfadeSliding = true;
+
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / durationMs);
+      // Cosine S-curve easing for silky physical glide feel
+      const ease = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+      const currentVal = startVal + (endVal - startVal) * ease;
+      this.updateCrossfader(currentVal);
+
+      if (progress < 1) {
+        this._crossfadeSlideFrame = requestAnimationFrame(step);
+      } else {
+        this.updateCrossfader(endVal);
+        this.isCrossfadeSliding = false;
+        this._crossfadeSlideFrame = null;
+      }
+    };
+
+    this._crossfadeSlideFrame = requestAnimationFrame(step);
+  }
+
+  cancelCrossfadeSlide() {
+    if (this._crossfadeSlideFrame) {
+      cancelAnimationFrame(this._crossfadeSlideFrame);
+      this._crossfadeSlideFrame = null;
+    }
+    this.isCrossfadeSliding = false;
   }
 
   // EQ Controls
