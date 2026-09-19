@@ -124,6 +124,38 @@ const App = () => {
         handleCrossfadeChange(Math.max(0, crossfadeVal - 0.05));
       } else if (e.code === 'ArrowRight') {
         handleCrossfadeChange(Math.min(1, crossfadeVal + 0.05));
+      } else if (e.code === 'KeyL') {
+        e.preventDefault();
+        const activeId = autoDjEngine.activeDeckId || 'A';
+        audioEngine.toggleAutoLoop(activeId, 4);
+      } else if (e.code === 'BracketLeft') {
+        e.preventDefault();
+        const activeId = autoDjEngine.activeDeckId || 'A';
+        audioEngine.halfLoop(activeId);
+      } else if (e.code === 'BracketRight') {
+        e.preventDefault();
+        const activeId = autoDjEngine.activeDeckId || 'A';
+        audioEngine.doubleLoop(activeId);
+      } else if (e.code >= 'Digit1' && e.code <= 'Digit4') {
+        // Keys 1-4: Hot Cues on Deck A
+        e.preventDefault();
+        const idx = parseInt(e.code.replace('Digit', '')) - 1;
+        const deckA = audioEngine.decks.A;
+        if (deckA.hotCues[idx] !== null && deckA.hotCues[idx] !== undefined) {
+          audioEngine.jumpHotCue('A', idx);
+        } else {
+          audioEngine.setHotCue('A', idx);
+        }
+      } else if (e.code >= 'Digit5' && e.code <= 'Digit8') {
+        // Keys 5-8: Hot Cues on Deck B
+        e.preventDefault();
+        const idx = parseInt(e.code.replace('Digit', '')) - 5;
+        const deckB = audioEngine.decks.B;
+        if (deckB.hotCues[idx] !== null && deckB.hotCues[idx] !== undefined) {
+          audioEngine.jumpHotCue('B', idx);
+        } else {
+          audioEngine.setHotCue('B', idx);
+        }
       }
     };
 
@@ -240,8 +272,8 @@ const App = () => {
             </button>
           )}
 
-          <div className="shortcuts-badge" title="Space: Play/Pause | Tab: Mix Now | Left/Right: Crossfader">
-            ⌨ <kbd>SPACE</kbd> PLAY • <kbd>TAB</kbd> MIX NOW • <kbd>◄ ►</kbd> FADER
+          <div className="shortcuts-badge" title="Space: Play/Pause | Tab: Mix Now | Left/Right: Crossfader | 1-8: Hot Cues | L: Auto Loop | [ ]: Halve/Double Loop">
+            ⌨ <kbd>SPACE</kbd> PLAY • <kbd>TAB</kbd> MIX • <kbd>1-8</kbd> CUES • <kbd>L</kbd> LOOP • <kbd>◄ ►</kbd> FADER
           </div>
         </div>
       </header>

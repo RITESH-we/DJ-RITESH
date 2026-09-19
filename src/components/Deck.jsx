@@ -22,7 +22,9 @@ const Deck = ({
   const [filterVal, setFilterVal] = useState(0);
   const [volumeFader, setVolumeFader] = useState(0.85);
   const [cuePoint, setCuePoint] = useState(0);
-  const [hotCues, setHotCues] = useState([null, null, null, null]);
+  const [hotCues, setHotCues] = useState([null, null, null, null, null, null, null, null]);
+  const [hotCueLabels, setHotCueLabels] = useState(['INTRO', 'VERSE', 'BUILD', 'DROP 🔥', 'BREAK', 'DROP 2', 'OUTRO', 'END']);
+  const [padMode, setPadMode] = useState('hotCue'); // 'hotCue' | 'beatJump' | 'roll'
   const [isLooping, setIsLooping] = useState(false);
   const [loopBeats, setLoopBeats] = useState(4);
   const [levels, setLevels] = useState({ peak: 0, rms: 0 });
@@ -39,6 +41,8 @@ const Deck = ({
         setIsPlaying(deck.isPlaying);
         setBpm(deck.bpm || 120);
         setPitchPercent(deck.pitchPercent || 0);
+        setIsLooping(Boolean(deck.isLooping));
+        if (deck.loopLengthBeats) setLoopBeats(deck.loopLengthBeats);
         if (deck.audioBuffer) {
           setDuration(deck.audioBuffer.duration);
           const t = audioEngine.getCurrentTime(deckId);
@@ -70,7 +74,11 @@ const Deck = ({
           setIsRealAudio(Boolean(res.isRealAudio));
           setCurrentTime(0);
           setCuePoint(0);
-          setHotCues([null, null, null, null]);
+          const deckCues = audioEngine.decks[deckId]?.hotCues || [null, null, null, null, null, null, null, null];
+          setHotCues([...deckCues]);
+          if (audioEngine.decks[deckId]?.hotCueLabels) {
+            setHotCueLabels([...audioEngine.decks[deckId].hotCueLabels]);
+          }
         }
       }).catch(() => {
         setIsAudioLoading(false);
@@ -122,9 +130,9 @@ const Deck = ({
     setCurrentTime(nextTime);
   };
 
-  // Hot Cues
+  // Pro 8-Pad Hot Cues Handlers
   const handleHotCueClick = (index) => {
-    if (hotCues[index] === null) {
+    if (hotCues[index] === null || hotCues[index] === undefined) {
       const pos = audioEngine.setHotCue(deckId, index);
       const next = [...hotCues];
       next[index] = pos;
@@ -142,11 +150,56 @@ const Deck = ({
     setHotCues(next);
   };
 
-  // Looping
+  const handleAutoDetectCues = () => {
+    const detected = audioEngine.autoDetectHotCues(deckId);
+    setHotCues([...detected]);
+    if (audioEngine.decks[deckId]?.hotCueLabels) {
+      setHotCueLabels([...audioEngine.decks[deckId].hotCueLabels]);
+    }
+  };
+
+  // Beat Jump (Forward / Backward by musical beats)
+  const handleBeatJump = (beats) => {
+    audioEngine.beatJump(deckId, beats);
+    setCurrentTime(audioEngine.getCurrentTime(deckId));
+  };
+
+  // Advanced Looping Handlers
   const handleLoopToggle = (beats) => {
     const active = audioEngine.toggleAutoLoop(deckId, beats);
-    setIsLooping(active);
+    setIsLooping(Boolean(active));
     setLoopBeats(beats);
+  };
+
+  const handleHalfLoop = () => {
+    const active = audioEngine.halfLoop(deckId);
+    setIsLooping(Boolean(active));
+    setLoopBeats(audioEngine.decks[deckId]?.loopLengthBeats || loopBeats / 2);
+  };
+
+  const handleDoubleLoop = () => {
+    const active = audioEngine.doubleLoop(deckId);
+    setIsLooping(Boolean(active));
+    setLoopBeats(audioEngine.decks[deckId]?.loopLengthBeats || loopBeats * 2);
+  };
+
+  const handleReloop = () => {
+    const active = audioEngine.reloop(deckId);
+    setIsLooping(Boolean(active));
+  };
+
+  const handleManualLoopIn = () => {
+    audioEngine.setManualLoopIn(deckId);
+  };
+
+  const handleManualLoopOut = () => {
+    audioEngine.setManualLoopOut(deckId);
+    setIsLooping(true);
+  };
+
+  const handleExitLoop = () => {
+    audioEngine.exitLoop(deckId);
+    setIsLooping(false);
   };
 
   // EQ & Filter
@@ -360,70 +413,387 @@ const Deck = ({
             </div>
           </div>
 
-          {/* Hot Cue Pads (1-4) */}
-          <div style={{ background: '#11141c', padding: '6px 8px', borderRadius: '6px', border: '1px solid #1f2533' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <span style={{ fontSize: '9px', fontWeight: 700, color: '#7a8799', letterSpacing: '0.5px' }}>HOT CUES (CLICK SET/JUMP, RIGHT-CLICK DEL)</span>
+          {/* PRO RGB PERFORMANCE PADS (HOT CUE / BEAT JUMP / LOOP ROLL) */}
+          <div style={{ background: '#11141c', padding: '8px 10px', borderRadius: '8px', border: '1px solid #1f2533' }}>
+            {/* Pad Mode Switcher Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
+              <div style={{ display: 'flex', gap: '3px' }}>
+                {[
+                  { id: 'hotCue', label: '🎯 HOT CUE' },
+                  { id: 'beatJump', label: '⚡ BEAT JUMP' },
+                  { id: 'roll', label: '🥁 ROLL' },
+                ].map((mode) => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setPadMode(mode.id)}
+                    style={{
+                      background: padMode === mode.id ? accentColor : '#181d28',
+                      color: padMode === mode.id ? '#000' : '#8898ab',
+                      border: `1px solid ${padMode === mode.id ? accentColor : '#2b3447'}`,
+                      borderRadius: '3px',
+                      padding: '3px 8px',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Auto-detect drops & cues button */}
+              {padMode === 'hotCue' && (
+                <button
+                  onClick={handleAutoDetectCues}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #3d4a66',
+                    color: '#9cc2f7',
+                    borderRadius: '3px',
+                    padding: '2px 6px',
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Automatically scan track and set cues at Intro, Verse, Buildup, Drop, and Outro"
+                >
+                  <span>✨</span> Auto-Cue Drops
+                </button>
+              )}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-              {hotCues.map((hc, idx) => {
-                const padColors = ['#00f0ff', '#ff0077', '#00ff88', '#ffcc00'];
-                const padColor = padColors[idx];
-                const isSet = hc !== null;
-                return (
+
+            {/* MODE 1: 8 RGB HOT CUE PADS */}
+            {padMode === 'hotCue' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                {hotCues.map((hc, idx) => {
+                  const padColors = [
+                    '#00f0ff', // 1: Cyan (Intro)
+                    '#ff0077', // 2: Magenta (Verse)
+                    '#00ff88', // 3: Green (Build)
+                    '#ffcc00', // 4: Yellow (Drop)
+                    '#ff6600', // 5: Orange (Break)
+                    '#9900ff', // 6: Purple (Drop 2)
+                    '#ff0033', // 7: Red (Outro)
+                    '#3399ff', // 8: Sky Blue (End)
+                  ];
+                  const padColor = padColors[idx % padColors.length];
+                  const isSet = hc !== null && hc !== undefined;
+                  const label = hotCueLabels[idx] || `PAD ${idx + 1}`;
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        position: 'relative',
+                        background: isSet
+                          ? `linear-gradient(180deg, ${padColor}33 0%, #151a24 100%)`
+                          : '#171c26',
+                        border: `1.5px solid ${isSet ? padColor : '#273144'}`,
+                        borderRadius: '5px',
+                        boxShadow: isSet ? `0 0 10px ${padColor}33, inset 0 0 6px ${padColor}22` : 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <button
+                        onClick={() => handleHotCueClick(idx)}
+                        onContextMenu={(e) => handleHotCueContextMenu(e, idx)}
+                        style={{
+                          width: '100%',
+                          background: 'transparent',
+                          border: 'none',
+                          color: isSet ? '#ffffff' : '#6b7a90',
+                          padding: '6px 2px 4px',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                        }}
+                        title={isSet ? `Jump to ${label} (${formatTime(hc)}). Right-click to clear.` : `Click to set Pad ${idx + 1}`}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <span
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: padColor,
+                              display: 'inline-block',
+                              boxShadow: isSet ? `0 0 6px ${padColor}` : 'none',
+                            }}
+                          />
+                          <span style={{ fontSize: '9px', fontWeight: 900, color: isSet ? padColor : '#8898aa', letterSpacing: '0.3px' }}>
+                            {label}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '8px', fontFamily: 'monospace', color: isSet ? '#d8e2ed' : '#556477', marginTop: '2px' }}>
+                          {isSet ? formatTime(hc) : '--:--'}
+                        </div>
+                      </button>
+
+                      {/* Small delete X on hover / right corner */}
+                      {isSet && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleHotCueContextMenu(e, idx);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '1px',
+                            right: '2px',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#55657a',
+                            fontSize: '9px',
+                            cursor: 'pointer',
+                            padding: '1px 3px',
+                          }}
+                          title="Clear Hot Cue"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* MODE 2: BEAT JUMP PADS */}
+            {padMode === 'beatJump' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                {[
+                  { beats: -16, label: '◀ 16B' },
+                  { beats: -8, label: '◀ 8B' },
+                  { beats: -4, label: '◀ 4B' },
+                  { beats: -1, label: '◀ 1B' },
+                  { beats: 1, label: '1B ▶' },
+                  { beats: 4, label: '4B ▶' },
+                  { beats: 8, label: '8B ▶' },
+                  { beats: 16, label: '16B ▶' },
+                ].map((item, idx) => (
                   <button
                     key={idx}
-                    onClick={() => handleHotCueClick(idx)}
-                    onContextMenu={(e) => handleHotCueContextMenu(e, idx)}
+                    onClick={() => handleBeatJump(item.beats)}
                     style={{
-                      background: isSet
-                        ? `linear-gradient(180deg, ${padColor}44 0%, #161b26 100%)`
-                        : '#1a1f2c',
-                      border: `1px solid ${isSet ? padColor : '#2b3447'}`,
-                      boxShadow: isSet ? `0 0 8px ${padColor}44` : 'none',
-                      color: isSet ? padColor : '#7a8799',
-                      padding: '6px 2px',
+                      background: 'linear-gradient(180deg, #222c3d 0%, #161c28 100%)',
+                      border: `1px solid ${item.beats < 0 ? '#00f0ff88' : '#ff007788'}`,
+                      color: item.beats < 0 ? '#00f0ff' : '#ff0077',
+                      padding: '8px 2px',
                       borderRadius: '4px',
                       fontWeight: 800,
-                      fontSize: '11px',
+                      fontSize: '10px',
                       cursor: 'pointer',
                     }}
+                    title={`Jump ${item.beats > 0 ? 'forward' : 'backward'} ${Math.abs(item.beats)} beats`}
                   >
-                    PAD {idx + 1}
-                    <div style={{ fontSize: '8px', color: '#8e9aa8', marginTop: '1px' }}>
-                      {isSet ? formatTime(hc) : 'EMPTY'}
-                    </div>
+                    {item.label}
                   </button>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {/* MODE 3: LOOP ROLL / STUTTER PADS */}
+            {padMode === 'roll' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                {[
+                  { beats: 0.0625, label: '1/16' },
+                  { beats: 0.125, label: '1/8' },
+                  { beats: 0.25, label: '1/4' },
+                  { beats: 0.5, label: '1/2' },
+                  { beats: 1, label: '1 BEAT' },
+                  { beats: 2, label: '2 BEATS' },
+                  { beats: 4, label: '4 BEATS' },
+                  { beats: 8, label: '8 BEATS' },
+                ].map((item, idx) => {
+                  const isActive = isLooping && loopBeats === item.beats;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handleLoopToggle(item.beats)}
+                      style={{
+                        background: isActive ? '#00ff88' : '#19202c',
+                        color: isActive ? '#000' : '#00ff88',
+                        border: `1px solid ${isActive ? '#00ff88' : '#2b384d'}`,
+                        boxShadow: isActive ? '0 0 10px #00ff88' : 'none',
+                        padding: '8px 2px',
+                        borderRadius: '4px',
+                        fontWeight: 800,
+                        fontSize: '10px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Auto Loop Buttons (1/2, 1, 2, 4, 8, 16 beats) */}
-          <div style={{ background: '#11141c', padding: '6px 8px', borderRadius: '6px', border: '1px solid #1f2533' }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: '#7a8799', marginBottom: '4px', letterSpacing: '0.5px' }}>
-              AUTO LOOP
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px' }}>
-              {[0.5, 1, 2, 4, 8, 16].map((beats) => {
-                const isActive = isLooping && loopBeats === beats;
-                return (
-                  <button
-                    key={beats}
-                    onClick={() => handleLoopToggle(beats)}
+          {/* ========================================================================= */}
+          {/* PRO AUTO LOOP CONSOLE (BEAT LOOPS, HALF/DOUBLE, IN/OUT, RELOOP)           */}
+          {/* ========================================================================= */}
+          <div
+            style={{
+              background: isLooping
+                ? 'radial-gradient(ellipse at top, rgba(255, 204, 0, 0.12) 0%, #12151f 100%)'
+                : '#11141c',
+              padding: '8px 10px',
+              borderRadius: '8px',
+              border: `1px solid ${isLooping ? '#ffcc00' : '#1f2533'}`,
+              boxShadow: isLooping ? '0 0 14px rgba(255, 204, 0, 0.2)' : 'none',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {/* Loop Header & Active Banner */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '9px', fontWeight: 800, color: isLooping ? '#ffcc00' : '#7a8799', letterSpacing: '0.8px' }}>
+                  AUTO LOOP
+                </span>
+                {isLooping && (
+                  <span
                     style={{
-                      background: isActive ? '#ffcc00' : '#1a1f2c',
-                      color: isActive ? '#000' : '#8e9aa8',
-                      border: `1px solid ${isActive ? '#ffcc00' : '#2b3447'}`,
+                      fontSize: '8px',
+                      fontWeight: 800,
+                      background: '#ffcc00',
+                      color: '#000',
+                      padding: '1px 5px',
                       borderRadius: '3px',
-                      padding: '4px 2px',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      boxShadow: isActive ? '0 0 8px #ffcc0088' : 'none',
+                      animation: 'pulse 1s infinite',
                     }}
                   >
-                    {beats === 0.5 ? '1/2' : beats}
+                    ACTIVE ({loopBeats}B)
+                  </span>
+                )}
+              </div>
+
+              {/* Loop Halve / Double / Reloop Buttons */}
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  onClick={handleHalfLoop}
+                  disabled={!isLooping}
+                  style={{
+                    background: '#1a1f2b',
+                    border: '1px solid #303b4e',
+                    color: isLooping ? '#ffcc00' : '#556375',
+                    borderRadius: '3px',
+                    padding: '2px 6px',
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    cursor: isLooping ? 'pointer' : 'default',
+                  }}
+                  title="Cut loop length in half (/2)"
+                >
+                  ½x
+                </button>
+                <button
+                  onClick={handleDoubleLoop}
+                  disabled={!isLooping}
+                  style={{
+                    background: '#1a1f2b',
+                    border: '1px solid #303b4e',
+                    color: isLooping ? '#ffcc00' : '#556375',
+                    borderRadius: '3px',
+                    padding: '2px 6px',
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    cursor: isLooping ? 'pointer' : 'default',
+                  }}
+                  title="Double loop length (2x)"
+                >
+                  2x
+                </button>
+                <button
+                  onClick={handleManualLoopIn}
+                  style={{
+                    background: '#1a1f2b',
+                    border: '1px solid #303b4e',
+                    color: '#00f0ff',
+                    borderRadius: '3px',
+                    padding: '2px 6px',
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                  title="Set Loop IN point at current playback time"
+                >
+                  IN
+                </button>
+                <button
+                  onClick={handleManualLoopOut}
+                  style={{
+                    background: '#1a1f2b',
+                    border: '1px solid #303b4e',
+                    color: '#ff0077',
+                    borderRadius: '3px',
+                    padding: '2px 6px',
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                  title="Set Loop OUT point and engage loop"
+                >
+                  OUT
+                </button>
+                <button
+                  onClick={handleReloop}
+                  style={{
+                    background: isLooping ? '#ffcc00' : '#1a1f2b',
+                    border: `1px solid ${isLooping ? '#ffcc00' : '#303b4e'}`,
+                    color: isLooping ? '#000' : '#ffcc00',
+                    borderRadius: '3px',
+                    padding: '2px 6px',
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                  title="Reloop or Exit active loop"
+                >
+                  {isLooping ? 'EXIT' : 'RELOOP'}
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Beat Loop Grid (1/8 to 32 Beats) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '3px' }}>
+              {[
+                { beats: 0.125, label: '1/8' },
+                { beats: 0.25, label: '1/4' },
+                { beats: 0.5, label: '1/2' },
+                { beats: 1, label: '1' },
+                { beats: 2, label: '2' },
+                { beats: 4, label: '4' },
+                { beats: 8, label: '8' },
+                { beats: 16, label: '16' },
+              ].map((item) => {
+                const isActive = isLooping && loopBeats === item.beats;
+                return (
+                  <button
+                    key={item.beats}
+                    onClick={() => handleLoopToggle(item.beats)}
+                    style={{
+                      background: isActive ? '#ffcc00' : '#161a24',
+                      color: isActive ? '#000000' : '#8e9aa8',
+                      border: `1px solid ${isActive ? '#ffcc00' : '#273142'}`,
+                      borderRadius: '3px',
+                      padding: '5px 1px',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: isActive ? '0 0 8px #ffcc0088' : 'none',
+                      textAlign: 'center',
+                    }}
+                    title={`Engage ${item.label} Beat Loop`}
+                  >
+                    {item.label}
                   </button>
                 );
               })}

@@ -128,13 +128,39 @@ const WaveformDisplay = ({
       ctx.fillRect(cueX - 1, 0, 3, h);
     }
 
-    // 5. Hot Cues markers
+    // 5. Hot Cues markers (8 RGB Flags)
+    const cueColors = [
+      '#00f0ff', // 1: Cyan (Intro)
+      '#ff0077', // 2: Magenta (Verse)
+      '#00ff88', // 3: Green (Build)
+      '#ffcc00', // 4: Yellow (Drop)
+      '#ff6600', // 5: Orange (Break)
+      '#9900ff', // 6: Purple (Drop 2)
+      '#ff0033', // 7: Red (Outro)
+      '#3399ff', // 8: Sky Blue (End)
+    ];
+
     hotCues.forEach((hc, idx) => {
-      if (hc !== null) {
+      if (hc !== null && hc !== undefined) {
         const hcX = (hc / duration) * width;
-        const colors = ['#00f0ff', '#ff0077', '#00ff88', '#ffcc00'];
-        ctx.fillStyle = colors[idx % colors.length];
+        const padColor = cueColors[idx % cueColors.length];
+
+        // Vertical line
+        ctx.fillStyle = padColor;
         ctx.fillRect(hcX - 1, 0, 2, h);
+
+        // Top triangular flag marker
+        ctx.beginPath();
+        ctx.moveTo(hcX, 0);
+        ctx.lineTo(hcX + 6, 4);
+        ctx.lineTo(hcX, 8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Small pad number
+        ctx.font = '700 8px Orbitron, sans-serif';
+        ctx.fillStyle = padColor;
+        ctx.fillText(`${idx + 1}`, hcX + 3, 16);
       }
     });
 

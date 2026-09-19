@@ -33,10 +33,18 @@
   * **Real-Time Beat Countdown**: Live countdown displaying seconds and beats remaining until the next transition (`Next Beat-Mix in: 18s / 36 beats`).
   * **Multiple Mix Modes**: Choose between `🎯 Smart Outro` (natural progression), `⚡ 60s Party Cut` (quick-fire bangers), `🎪 90s Festival Cut`, or `🎵 Full Songs`.
   * **One-Touch Override**: Hit `[ ⚡ MIX NEXT SONG NOW ]` anytime to immediately trigger an instantaneous beatmatched blend to the next queued track.
-* 🎛️ **Dual Pioneer-Style Hardware Decks**:
+* 🎛️ **Dual Pioneer-Style Hardware Decks with 8 RGB Performance Pads**:
   * Realistic vinyl jogwheels with tactile scratching, pitch bending, and spinbacks.
   * Real-time 60 FPS animated audio waveforms, cue flags, and loop indicators.
-  * 4 Hot Cue pads per deck, beat sync, and variable tempo pitch slider ($\pm 16\%$).
+  * **8 Pro RGB Performance Pads per Deck**:
+    * **`HOT CUE` Mode**: 8 color-coded pads (`INTRO`, `VERSE`, `BUILD`, `DROP 🔥`, `BREAK`, `DROP 2`, `OUTRO`, `END CUT`) with **AI Auto-Cue Detection** that scans and pins track drop landmarks automatically.
+    * **`BEAT JUMP` Mode**: Instantly jump backwards or forwards by `16`, `8`, `4`, or `1` musical beats on the fly without stopping audio.
+    * **`LOOP ROLL` Mode**: Momentary / toggle rhythmic stutter rolls (`1/16`, `1/8`, `1/4`, `1/2`, `1`, `2`, `4`, `8` beats).
+  * **Pro Auto-Looping Console**:
+    * Direct quantized beat loops: `1/8`, `1/4`, `1/2`, `1`, `2`, `4`, `8`, `16`, `32` beats.
+    * Real-time **`½x (Halve)`** and **`2x (Double)`** loop length multipliers for intense drop buildups.
+    * Manual **`IN` / `OUT`** loop capture points and **`RELOOP / EXIT`** toggle with glowing active loop banner.
+  * Beat sync and variable tempo pitch slider ($\pm 16\%$).
 * 📱 **Mobile & Laptop Responsive Console**:
   * **Touchscreen Vinyl Scratching**: Native multi-touch gesture support (`touchstart`, `touchmove`, `touchend`) with gesture locking so you can scratch on mobile without page scrolling.
   * **Dedicated Mobile Console Switcher**: Toggle instantly between `[⚡ ALL CONSOLE]`, `[🔵 DECK A]`, `[🎛️ MIXER]`, and `[🔴 DECK B]`.
