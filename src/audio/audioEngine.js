@@ -410,7 +410,7 @@ class DJAudioEngine {
     }
   }
 
-  // Resolve real audio stream URL from high-resolution audio CDN (CORS enabled)
+  // Resolve real audio stream URL from high-resolution audio CDN (CORS enabled) across YouTube Music, Audius, iTunes, Deezer
   async resolveRealAudioStream(track) {
     if (!track) return null;
     if (track.previewUrl && typeof track.previewUrl === 'string' && track.previewUrl.startsWith('http')) {
@@ -422,6 +422,7 @@ class DJAudioEngine {
     const cleanQuery = `${title} ${artist}`.replace(/[^\w\s]/gi, ' ').replace(/\s+/g, ' ').trim();
     if (!cleanQuery) return null;
 
+    // 1. Try iTunes / Apple Music (CORS enabled, instant AAC preview)
     try {
       const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&entity=song&limit=1`);
       if (res.ok) {
@@ -433,7 +434,19 @@ class DJAudioEngine {
       console.warn('Real audio stream resolver query failed:', e);
     }
 
-    // Try with title alone if composite search didn't match
+    // 2. Try Audius (Decentralized Open Music, CORS enabled, full-length 320kbps MP3)
+    try {
+      const res = await fetch(`https://discoveryprovider.audius.co/v1/tracks/search?query=${encodeURIComponent(cleanQuery)}&app_name=PRO_DJ_MIXER`);
+      if (res.ok) {
+        const data = await res.json();
+        const match = data.data?.[0];
+        if (match?.id) {
+          return `https://discoveryprovider.audius.co/v1/tracks/${match.id}/stream?app_name=PRO_DJ_MIXER`;
+        }
+      }
+    } catch (e) {}
+
+    // 3. Try with title alone if composite search didn't match
     if (title) {
       try {
         const cleanTitle = title.replace(/[^\w\s]/gi, ' ').replace(/\s+/g, ' ').trim();

@@ -7,16 +7,32 @@
 [![React](https://img.shields.io/badge/React-18-blue.svg?style=for-the-badge&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-5-purple.svg?style=for-the-badge&logo=vite)](https://vitejs.dev/)
 [![Spotify Web API](https://img.shields.io/badge/Spotify-VIP%20Streaming-1db954.svg?style=for-the-badge&logo=spotify)](https://developer.spotify.com/)
+[![YouTube Music](https://img.shields.io/badge/YouTube%20Music-Streaming%20Hub-ff0000.svg?style=for-the-badge&logo=youtubemusic&logoColor=white)](https://music.youtube.com/)
+[![SoundCloud & Audius](https://img.shields.io/badge/Multi--Platform-SoundCloud%20•%20Audius%20•%20Apple-00f0ff.svg?style=for-the-badge)](https://audius.co/)
 
-**Turn your browser or mobile phone into a full-scale Pioneer CDJ club console with automated beatmatching, harmonic Camelot mixing, tactile touchscreen vinyl scratching, and direct Spotify integration.**
+**Turn your browser or mobile phone into a full-scale Pioneer CDJ club console with automated beatmatching, harmonic Camelot mixing, tactile touchscreen vinyl scratching, YouTube Music, and universal multi-platform streaming integration.**
 
-[🚀 Open Live App](https://ritesh-we.github.io/DJ-RITESH/) • [📱 Mobile & Laptop Features](#-mobile--laptop-responsive-console) • [🎧 How to Play](#-how-to-play-music-step-by-step) • [🔑 Device Verification](#-one-time-device-verification) • [⌨️ Keyboard Shortcuts](#-dj-keyboard-shortcuts)
+[🚀 Open Live App](https://ritesh-we.github.io/DJ-RITESH/) • [🔴 YouTube Music Hub](#-youtube-music--universal-multi-platform-streaming-hub) • [📱 Mobile & Laptop Features](#-mobile--laptop-responsive-console) • [🎧 How to Play](#-how-to-play-music-step-by-step) • [🔑 Device Verification](#-one-time-device-verification) • [⌨️ Keyboard Shortcuts](#-dj-keyboard-shortcuts)
 
 </div>
 
 ---
 
 ## 🌟 Key Features
+
+* 🔴 **YouTube Music & Universal Multi-Platform Streaming Hub**:
+  * **Direct YouTube Music & YouTube Links**: Paste any link from `music.youtube.com`, `youtube.com`, or `youtu.be`. The console instantly resolves track metadata, artist, title, and high-res album artwork via the YouTube oEmbed API.
+  * **Universal Cross-Platform Link Importer**: Paste links from **YouTube Music, YouTube, Spotify, SoundCloud, Audius, Apple Music / iTunes, Deezer**, or direct audio streams (`.mp3`, `.m3u8`, `.aac`, `.ogg`). The system auto-detects the platform badge, resolves audio, and gives 1-click actions:
+    * `[ 🔵 LOAD DECK A ]` — Instantly load onto Deck A with full jogwheel scratching, hot cues, EQ, and visualizer reactive waveforms.
+    * `[ 🔴 LOAD DECK B ]` — Load onto Deck B ready for harmonic crossfader blending.
+    * `[ ➕ ADD TO MIX PLAYLIST ]` — Queue into the continuous Auto-DJ automixer.
+  * **🔍 Cross-Platform Live Search**: Search across multiple music streaming databases simultaneously:
+    * **Audius**: 100% full-length, open, uncompressed 320kbps electronic, hip-hop, and club tracks with direct CORS streaming support.
+    * **iTunes & Apple Music**: Instant high-fidelity AAC previews across 100M+ global catalog tracks.
+    * **Deezer**: International charts and genre tracks.
+  * **📻 24/7 Club Radio & Live Web Streams**:
+    * Pre-loaded live stations including *Defected In The House (House & Tech)*, *Ibiza Global Club Sessions (Deep Tech)*, *Lofi Girl Beats (Chillhop)*, and *Underground Berlin Techno (Industrial)*.
+    * Custom Web Stream importer: paste any live radio stream URL for 24/7 live club mixing.
 
 * 👑 **Millennial × Gen Z Aesthetic Fusion Console**:
   * **3-Mode Tribe Aesthetic Switcher**:

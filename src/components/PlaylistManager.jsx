@@ -11,6 +11,7 @@ const PlaylistManager = ({
   onOpenSpotify = () => {},
   onOpenVibeMix = () => {},
   onOpenSpotifyAccount = () => {},
+  onOpenMultiStream = () => {},
 }) => {
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
@@ -883,25 +884,48 @@ const PlaylistManager = ({
             <span>👤</span> Spotify Library
           </button>
 
-          {/* Spotify Search & Paste URL */}
+          {/* YouTube Music Quick Button */}
           <button
-            onClick={onOpenSpotify}
+            onClick={() => onOpenMultiStream('youtube')}
             style={{
-              background: '#161b24',
-              border: '1px solid #293447',
-              color: '#9ba8b8',
+              background: 'linear-gradient(180deg, #381515 0%, #200a0a 100%)',
+              border: '1px solid #ff0000',
+              color: '#ff4d4d',
               borderRadius: '5px',
-              padding: '7px 10px',
+              padding: '7px 12px',
               fontSize: '11px',
-              fontWeight: 700,
+              fontWeight: 800,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '6px',
+              boxShadow: '0 0 10px rgba(255, 0, 0, 0.25)',
             }}
-            title="Paste any Spotify song or playlist URL to import"
+            title="Search & Stream from YouTube Music"
           >
-            <span>🔍</span> Paste Link / Search
+            <span>🔴</span> YouTube Music
+          </button>
+
+          {/* Universal Multi-Platform Stream Button */}
+          <button
+            onClick={() => onOpenMultiStream('all')}
+            style={{
+              background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(123, 0, 255, 0.2) 100%)',
+              border: '1px solid #00f0ff88',
+              color: '#00f0ff',
+              borderRadius: '5px',
+              padding: '7px 12px',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 0 10px rgba(0, 240, 255, 0.25)',
+            }}
+            title="Paste any link or search across YouTube Music, Spotify, SoundCloud, Apple Music & Audius"
+          >
+            <span>🌐</span> Stream Any Platform
           </button>
         </div>
 

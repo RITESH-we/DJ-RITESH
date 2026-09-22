@@ -8,6 +8,7 @@ import SpotifyAccountBrowser from './components/SpotifyAccountBrowser';
 import ClubVisualizer from './components/ClubVisualizer';
 import SoundFxBoard from './components/SoundFxBoard';
 import VibeCardModal from './components/VibeCardModal';
+import MultiStreamModal from './components/MultiStreamModal';
 import audioEngine from './audio/audioEngine';
 import autoDjEngine from './audio/autoDjEngine';
 import spotifyService from './services/spotifyService';
@@ -28,6 +29,8 @@ const App = () => {
   const [isVibeMixOpen, setIsVibeMixOpen] = useState(false);
   const [isSpotifyAccountOpen, setIsSpotifyAccountOpen] = useState(false);
   const [isVibeCardOpen, setIsVibeCardOpen] = useState(false);
+  const [isMultiStreamOpen, setIsMultiStreamOpen] = useState(false);
+  const [multiStreamPlatform, setMultiStreamPlatform] = useState('all');
 
   // Handle Spotify OAuth callback (?code=...) on page load
   useEffect(() => {
@@ -380,6 +383,56 @@ const App = () => {
             <span>📸</span> VIBE SNAP
           </button>
 
+          {/* YouTube Music quick button */}
+          <button
+            onClick={() => {
+              setMultiStreamPlatform('youtube_music');
+              setIsMultiStreamOpen(true);
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #ff0000 0%, #b30000 100%)',
+              border: 'none',
+              borderRadius: '6px',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: '11px',
+              padding: '8px 12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 0 14px rgba(255, 0, 0, 0.45)',
+            }}
+            title="Stream & mix songs directly from YouTube Music / YouTube"
+          >
+            <span>🔴</span> YT Music
+          </button>
+
+          {/* Universal Multi-Platform Music Stream Hub */}
+          <button
+            onClick={() => {
+              setMultiStreamPlatform('all');
+              setIsMultiStreamOpen(true);
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #00f0ff 0%, #0077ff 100%)',
+              border: 'none',
+              borderRadius: '6px',
+              color: '#000',
+              fontWeight: 900,
+              fontSize: '11px',
+              padding: '8px 12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 0 14px rgba(0, 240, 255, 0.4)',
+            }}
+            title="Search & stream across YouTube, SoundCloud, Audius, Apple Music, Deezer & Web Radio"
+          >
+            <span>🌐</span> Stream Hub
+          </button>
+
           {/* AI Vibe Mix quick button */}
           <button
             onClick={() => setIsVibeMixOpen(true)}
@@ -531,6 +584,10 @@ const App = () => {
           onOpenSpotify={() => setIsSpotifyModalOpen(true)}
           onOpenVibeMix={() => setIsVibeMixOpen(true)}
           onOpenSpotifyAccount={() => setIsSpotifyAccountOpen(true)}
+          onOpenMultiStream={(platform = 'all') => {
+            setMultiStreamPlatform(platform);
+            setIsMultiStreamOpen(true);
+          }}
         />
       </section>
 
@@ -540,6 +597,15 @@ const App = () => {
         onClose={() => setIsSpotifyModalOpen(false)}
         onAddTrack={handleAddSpotifyTrack}
         onLoadDeck={handleLoadDeckSpotifyTrack}
+      />
+
+      {/* Universal Multi-Platform Music Stream Hub (YouTube Music, SoundCloud, Audius, etc.) */}
+      <MultiStreamModal
+        isOpen={isMultiStreamOpen}
+        onClose={() => setIsMultiStreamOpen(false)}
+        onAddTrack={handleAddSpotifyTrack}
+        onLoadDeck={handleLoadDeckSpotifyTrack}
+        defaultPlatform={multiStreamPlatform}
       />
 
       {/* AI Vibe Mix Generator Modal */}
