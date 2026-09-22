@@ -65,7 +65,9 @@ const MultiStreamModal = ({
   defaultPlatform = 'all',
 }) => {
   const [activeTab, setActiveTab] = useState('link'); // 'link' | 'search' | 'radio'
-  const [selectedPlatform, setSelectedPlatform] = useState(defaultPlatform);
+  const [selectedPlatform, setSelectedPlatform] = useState(
+    (defaultPlatform === 'youtube_music' || defaultPlatform === 'youtube') ? 'youtube' : defaultPlatform
+  );
 
   // Link Tab State
   const [linkInput, setLinkInput] = useState('');
@@ -80,6 +82,12 @@ const MultiStreamModal = ({
   const [searchResults, setSearchResults] = useState([]);
   const [searchError, setSearchError] = useState('');
 
+  // Sync selected platform on open or defaultPlatform change
+  useEffect(() => {
+    const normalized = (defaultPlatform === 'youtube_music' || defaultPlatform === 'youtube') ? 'youtube' : (defaultPlatform || 'all');
+    setSelectedPlatform(normalized);
+  }, [defaultPlatform, isOpen]);
+
   if (!isOpen) return null;
 
   // Handle URL Typing for auto-detection
@@ -92,6 +100,24 @@ const MultiStreamModal = ({
     }
     const detected = musicStreamService.detectPlatform(val);
     setDetectedType(detected);
+  };
+
+  // 1-Click Quick Test for YouTube & other platforms
+  const handleQuickTest = async (testUrl) => {
+    setLinkInput(testUrl);
+    setDetectedType(musicStreamService.detectPlatform(testUrl));
+    setIsParsingLink(true);
+    setLinkError('');
+    setLinkTrackResult(null);
+
+    try {
+      const trackObj = await musicStreamService.parseAnyLink(testUrl);
+      setLinkTrackResult(trackObj);
+    } catch (err) {
+      setLinkError(err.message || 'Failed to import streaming link.');
+    } finally {
+      setIsParsingLink(false);
+    }
   };
 
   // Parse Link
@@ -114,7 +140,7 @@ const MultiStreamModal = ({
   };
 
   // Execute Search
-  const handleSearch = async (e) => {
+  const handleSearch = async (e, forcedPlatform = selectedPlatform) => {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
 
@@ -123,7 +149,7 @@ const MultiStreamModal = ({
     setSearchResults([]);
 
     try {
-      const results = await musicStreamService.searchAcrossPlatforms(searchQuery, selectedPlatform);
+      const results = await musicStreamService.searchAcrossPlatforms(searchQuery, forcedPlatform);
       if (!results || results.length === 0) {
         setSearchError('No matching streaming tracks found. Try broader keywords or artist names.');
       } else {
@@ -133,6 +159,14 @@ const MultiStreamModal = ({
       setSearchError(err.message || 'Search request failed.');
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  // When changing platform pill, auto-rerun search if query exists
+  const handleSelectPlatform = (platformId) => {
+    setSelectedPlatform(platformId);
+    if (searchQuery.trim()) {
+      handleSearch(null, platformId);
     }
   };
 
@@ -351,6 +385,81 @@ const MultiStreamModal = ({
                 </button>
               </div>
 
+              {/* 1-Click Instant Test Buttons for YouTube Music & Streaming */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '4px', background: '#0e121d', padding: '8px 10px', borderRadius: '8px', border: '1px dashed #273347' }}>
+                <span style={{ fontSize: '10px', fontWeight: 800, color: '#ff4444', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>🔴</span> 1-CLICK TEST:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleQuickTest('https://music.youtube.com/watch?v=kJQP7kiw5Fk')}
+                  style={{
+                    background: '#ff000018',
+                    border: '1px solid #ff000044',
+                    color: '#ff6666',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    borderRadius: '5px',
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                  }}
+                  title="Test YouTube Music link: Despacito (Luis Fonsi)"
+                >
+                  🌴 Despacito (YT Music)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickTest('https://www.youtube.com/watch?v=60ItHLz5WEA')}
+                  style={{
+                    background: '#ff000018',
+                    border: '1px solid #ff000044',
+                    color: '#ff6666',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    borderRadius: '5px',
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                  }}
+                  title="Test YouTube link: Faded (Alan Walker)"
+                >
+                  ⚡ Faded (YouTube)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickTest('https://youtu.be/fJ9rUzIMcZQ')}
+                  style={{
+                    background: '#ff000018',
+                    border: '1px solid #ff000044',
+                    color: '#ff6666',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    borderRadius: '5px',
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                  }}
+                  title="Test Short YouTube link: Bohemian Rhapsody"
+                >
+                  👑 Bohemian Rhapsody
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickTest('https://www.youtube.com/watch?v=JGwWNGJdvx8')}
+                  style={{
+                    background: '#ff000018',
+                    border: '1px solid #ff000044',
+                    color: '#ff6666',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    borderRadius: '5px',
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                  }}
+                  title="Test YouTube link: Shape of You"
+                >
+                  🎧 Shape of You
+                </button>
+              </div>
+
               {/* Supported platform badges */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
                 <span style={{ fontSize: '9px', fontWeight: 800, color: '#5f7188' }}>SUPPORTED:</span>
@@ -531,7 +640,7 @@ const MultiStreamModal = ({
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => setSelectedPlatform(p.id)}
+                    onClick={() => handleSelectPlatform(p.id)}
                     style={{
                       background: selectedPlatform === p.id ? `${p.color}33` : '#131824',
                       color: selectedPlatform === p.id ? p.color : '#7b8c9f',

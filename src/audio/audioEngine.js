@@ -417,44 +417,63 @@ class DJAudioEngine {
       return track.previewUrl;
     }
 
-    const title = track.title || track.name || '';
-    const artist = track.artist || (track.artists ? track.artists.map((a) => a.name).join(' ') : '');
-    const cleanQuery = `${title} ${artist}`.replace(/[^\w\s]/gi, ' ').replace(/\s+/g, ' ').trim();
-    if (!cleanQuery) return null;
+    const rawTitle = track.title || track.name || '';
+    const rawArtist = track.artist || (track.artists ? track.artists.map((a) => a.name).join(' ') : '');
 
-    // 1. Try iTunes / Apple Music (CORS enabled, instant AAC preview)
-    try {
-      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&entity=song&limit=1`);
-      if (res.ok) {
-        const data = await res.json();
-        const url = data.results?.[0]?.previewUrl;
-        if (url) return url;
-      }
-    } catch (e) {
-      console.warn('Real audio stream resolver query failed:', e);
+    // Strip video fluff, official tags, and ft./feat. annotations for maximum query match precision
+    const cleanTitle = rawTitle
+      .replace(/\s*[\(\[](official\s*(music\s*)?video|official|audio|lyrics?|lyric\s*video|visualizer|remastered|hd|4k|hq|extended\s*mix)[\)\]]/gi, '')
+      .replace(/\s*[\(\[]ft\.?\s*[^)\]]+[\)\]]/gi, '')
+      .replace(/\s*[\(\[]feat\.?\s*[^)\]]+[\)\]]/gi, '')
+      .replace(/\s+ft\.?\s+.*$/i, '')
+      .replace(/\s+feat\.?\s+.*$/i, '')
+      .replace(/[^\w\s]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const cleanArtist = rawArtist
+      .replace(/VEVO$/i, '')
+      .replace(/Official(\s+Channel|\s+Page)?$/i, '')
+      .replace(/\s*-\s*Topic$/i, '')
+      .replace(/[^\w\s]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // 1. Try iTunes with clean title + clean artist
+    if (cleanTitle && cleanArtist) {
+      try {
+        const query = `${cleanTitle} ${cleanArtist}`;
+        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`);
+        if (res.ok) {
+          const data = await res.json();
+          const url = data.results?.[0]?.previewUrl;
+          if (url) return url;
+        }
+      } catch (e) {}
     }
 
-    // 2. Try Audius (Decentralized Open Music, CORS enabled, full-length 320kbps MP3)
-    try {
-      const res = await fetch(`https://discoveryprovider.audius.co/v1/tracks/search?query=${encodeURIComponent(cleanQuery)}&app_name=PRO_DJ_MIXER`);
-      if (res.ok) {
-        const data = await res.json();
-        const match = data.data?.[0];
-        if (match?.id) {
-          return `https://discoveryprovider.audius.co/v1/tracks/${match.id}/stream?app_name=PRO_DJ_MIXER`;
-        }
-      }
-    } catch (e) {}
-
-    // 3. Try with title alone if composite search didn't match
-    if (title) {
+    // 2. Try iTunes with clean title alone
+    if (cleanTitle) {
       try {
-        const cleanTitle = title.replace(/[^\w\s]/gi, ' ').replace(/\s+/g, ' ').trim();
         const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleanTitle)}&entity=song&limit=1`);
         if (res.ok) {
           const data = await res.json();
           const url = data.results?.[0]?.previewUrl;
           if (url) return url;
+        }
+      } catch (e) {}
+    }
+
+    // 3. Try Audius with clean title (Decentralized Open Music, CORS enabled, full-length 320kbps MP3)
+    if (cleanTitle) {
+      try {
+        const res = await fetch(`https://discoveryprovider.audius.co/v1/tracks/search?query=${encodeURIComponent(cleanTitle)}&app_name=PRO_DJ_MIXER`);
+        if (res.ok) {
+          const data = await res.json();
+          const match = data.data?.[0];
+          if (match?.id) {
+            return `https://discoveryprovider.audius.co/v1/tracks/${match.id}/stream?app_name=PRO_DJ_MIXER`;
+          }
         }
       } catch (e) {}
     }
