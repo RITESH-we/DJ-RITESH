@@ -901,9 +901,9 @@ const PlaylistManager = ({
               gap: '6px',
               boxShadow: '0 0 10px rgba(255, 0, 0, 0.25)',
             }}
-            title="Stream & mix songs directly from YouTube Music / YouTube"
+            title="Stream & mix 80+ curated songs or paste any link from YouTube Music / YouTube"
           >
-            <span>🔴</span> YouTube Music
+            <span>🔴</span> YouTube (80+ Hits)
           </button>
 
           {/* Spotify Search Button */}
@@ -924,7 +924,7 @@ const PlaylistManager = ({
             }}
             title="Search Spotify track catalog or paste Spotify track link"
           >
-            <span>🟢</span> Spotify Search
+            <span>🟢</span> Spotify VIP (80+)
           </button>
         </div>
 

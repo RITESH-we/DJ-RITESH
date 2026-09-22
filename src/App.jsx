@@ -401,7 +401,7 @@ const App = () => {
             }}
             title="Stream & mix songs directly from YouTube Music / YouTube"
           >
-            <span>🔴</span> YT Music
+            <span>🔴</span> YouTube (80+ Hits)
           </button>
 
           {/* AI Vibe Mix quick button */}
