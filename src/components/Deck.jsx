@@ -66,6 +66,20 @@ const Deck = ({
   // Handle track prop change
   useEffect(() => {
     if (track) {
+      const existingDeck = audioEngine.decks[deckId];
+      if (existingDeck?.trackInfo?.id === track.id && existingDeck?.audioBuffer) {
+        setDuration(existingDeck.audioBuffer.duration);
+        setBpm(existingDeck.bpm);
+        setIsRealAudio(Boolean(existingDeck.isRealAudio));
+        setIsPlaying(existingDeck.isPlaying);
+        const deckCues = existingDeck.hotCues || [null, null, null, null, null, null, null, null];
+        setHotCues([...deckCues]);
+        if (existingDeck.hotCueLabels) {
+          setHotCueLabels([...existingDeck.hotCueLabels]);
+        }
+        return;
+      }
+
       setIsAudioLoading(true);
       audioEngine.loadTrack(deckId, track).then((res) => {
         setIsAudioLoading(false);

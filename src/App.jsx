@@ -123,14 +123,15 @@ const App = () => {
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  const handleLoadToDeck = (deckId, track) => {
+  const handleLoadToDeck = async (deckId, track) => {
     if (deckId === 'queue') {
       handleAddSpotifyTrack(track);
       return;
     }
-    audioEngine.resumeContext();
+    await audioEngine.resumeContext();
     setAudioStarted(true);
     setActiveTracks((prev) => ({ ...prev, [deckId]: track }));
+    await audioEngine.loadTrack(deckId, track);
   };
 
   const handleStartAudio = async () => {
@@ -144,6 +145,44 @@ const App = () => {
     audioEngine.updateCrossfader(0.0);
     setActiveTracks((prev) => ({ ...prev, A: track }));
     await audioEngine.loadTrack('A', track);
+  };
+
+  // Seamless Mode Switcher with cross-deck audio migration
+  const switchAppMode = async (targetMode) => {
+    if (targetMode === appMode) return;
+    await audioEngine.resumeContext();
+    setAudioStarted(true);
+
+    if (targetMode === 'player') {
+      autoDjEngine.toggleAutoDJ(false);
+
+      const deckA = audioEngine.decks.A;
+      const deckB = audioEngine.decks.B;
+      const wasBPlaying = deckB && (deckB.isPlaying || crossfadeVal > 0.55);
+
+      if (wasBPlaying && activeTracks.B) {
+        // Deck B was playing: seamlessly transfer song and playback position to Deck A
+        const bTime = audioEngine.getCurrentTime('B');
+        const isBPlaying = deckB.isPlaying;
+        audioEngine.stop('B');
+        setActiveTracks((prev) => ({ ...prev, A: activeTracks.B }));
+        audioEngine.updateCrossfader(0.0);
+        await audioEngine.loadTrack('A', activeTracks.B);
+        if (isBPlaying) {
+          audioEngine.seek('A', bTime);
+          audioEngine.play('A');
+        }
+      } else {
+        audioEngine.updateCrossfader(0.0);
+        if (activeTracks.A && (!deckA?.trackInfo || !deckA?.audioBuffer)) {
+          await audioEngine.loadTrack('A', activeTracks.A);
+        }
+      }
+      setAppMode('player');
+    } else {
+      autoDjEngine.setMixMode('smartOutro');
+      setAppMode('dj');
+    }
   };
 
   // Determine on-air active deck and track for real-time audio-reactive graphics stage
@@ -313,10 +352,7 @@ const App = () => {
             }}
           >
             <button
-              onClick={() => {
-                setAppMode('dj');
-                autoDjEngine.setMixMode('smartOutro');
-              }}
+              onClick={() => switchAppMode('dj')}
               style={{
                 background: appMode === 'dj' ? 'linear-gradient(135deg, #00f0ff 0%, #7b00ff 100%)' : 'transparent',
                 color: appMode === 'dj' ? '#000000' : '#8fa4bf',
@@ -338,11 +374,7 @@ const App = () => {
             </button>
 
             <button
-              onClick={() => {
-                setAppMode('player');
-                audioEngine.updateCrossfader(0.0);
-                autoDjEngine.toggleAutoDJ(false);
-              }}
+              onClick={() => switchAppMode('player')}
               style={{
                 background: appMode === 'player' ? 'linear-gradient(135deg, #00ffaa 0%, #00f0ff 100%)' : 'transparent',
                 color: appMode === 'player' ? '#000000' : '#8fa4bf',

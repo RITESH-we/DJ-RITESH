@@ -12,18 +12,24 @@ const CasualPlayer = ({
   onOpenSpotify = () => {},
   onOpenVibeMix = () => {},
 }) => {
-  // Playback state
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(currentTrack?.duration || 300);
+  // Playback state synchronized with audioEngine
+  const [isPlaying, setIsPlaying] = useState(Boolean(audioEngine.decks.A?.isPlaying));
+  const [currentTime, setCurrentTime] = useState(audioEngine.getCurrentTime('A') || 0);
+  const [duration, setDuration] = useState(
+    audioEngine.decks.A?.audioBuffer?.duration || currentTrack?.duration || 300
+  );
   const [volume, setVolume] = useState(0.85);
   const [isMuted, setIsMuted] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekTime, setSeekTime] = useState(0);
+  const [isLoadingTrack, setIsLoadingTrack] = useState(false);
+
+  // Guard against rapid track-end cascade loops
+  const isEndingRef = useRef(false);
 
   // Shuffle & Repeat modes
   // shuffleMode: 'off' | 'standard' | 'smart'
-  const [shuffleMode, setShuffleMode] = useState('smart'); // Default to Smart Shuffle for best user experience!
+  const [shuffleMode, setShuffleMode] = useState('smart'); // Default to Smart Shuffle
   // repeatMode: 'off' | 'all' | 'one'
   const [repeatMode, setRepeatMode] = useState('all');
 
@@ -44,15 +50,32 @@ const CasualPlayer = ({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Sync state when currentTrack changes
+  // Sync state and ensure Deck A has audioBuffer loaded when currentTrack changes
   useEffect(() => {
-    if (currentTrack) {
-      setDuration(currentTrack.duration || 300);
-      setCurrentTime(0);
+    if (!currentTrack) return;
+    const deckA = audioEngine.decks.A;
+    if (deckA?.audioBuffer?.duration) {
+      setDuration(deckA.audioBuffer.duration);
+    } else if (currentTrack.duration) {
+      setDuration(currentTrack.duration);
     }
-  }, [currentTrack]);
 
-  // Keep original playlist in sync if user imports new tracks
+    const isAlreadyLoaded = deckA?.trackInfo?.id === currentTrack.id && deckA?.audioBuffer;
+    if (!isAlreadyLoaded) {
+      setIsLoadingTrack(true);
+      audioEngine.loadTrack('A', currentTrack).then((res) => {
+        setIsLoadingTrack(false);
+        if (res?.duration) {
+          setDuration(res.duration);
+        }
+      }).catch((e) => {
+        console.warn('CasualPlayer loadTrack error:', e);
+        setIsLoadingTrack(false);
+      });
+    }
+  }, [currentTrack?.id]);
+
+  // Keep original playlist and smart queue in sync when playlist updates
   useEffect(() => {
     if (playlist.length > 0) {
       setOriginalPlaylist(playlist);
@@ -66,7 +89,7 @@ const CasualPlayer = ({
         setActiveQueue(playlist);
       }
     }
-  }, [playlist]);
+  }, [playlist, shuffleMode]);
 
   // Periodic poll of playback progress from audioEngine (Deck A is master in casual mode)
   useEffect(() => {
@@ -78,8 +101,10 @@ const CasualPlayer = ({
           const pos = audioEngine.getCurrentTime('A');
           setCurrentTime(pos);
 
-          // Track finished detection (reached within 0.8s of duration)
-          if (deckA.isPlaying && pos > 0 && deckA.audioBuffer && pos >= deckA.audioBuffer.duration - 0.8) {
+          // Track finished detection (guarded with isEndingRef to avoid skipping multiple tracks)
+          const targetDuration = currentTrack?.duration || deckA.audioBuffer?.duration || 300;
+          if (deckA.isPlaying && pos > 0 && deckA.audioBuffer && pos >= targetDuration - 0.8 && !isEndingRef.current) {
+            isEndingRef.current = true;
             handleTrackEnded();
           }
         }
@@ -94,14 +119,17 @@ const CasualPlayer = ({
     const canvas = visualizerCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const deckA = audioEngine.decks.A;
-    if (!deckA || !deckA.analyserNode) return;
-
-    const analyser = deckA.analyserNode;
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
     const render = () => {
       animFrameRef.current = requestAnimationFrame(render);
+      const deckA = audioEngine.decks.A;
+      if (!deckA || !deckA.analyserNode) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      const analyser = deckA.analyserNode;
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteFrequencyData(dataArray);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -116,7 +144,6 @@ const CasualPlayer = ({
         const x = i * (barWidth + 2);
         const y = canvas.height - barHeight;
 
-        // Gradient color: Cyan to Purple / Green
         const grad = ctx.createLinearGradient(0, y, 0, canvas.height);
         if (shuffleMode === 'smart') {
           grad.addColorStop(0, '#00ffaa');
@@ -146,8 +173,13 @@ const CasualPlayer = ({
     await audioEngine.resumeContext();
     const deckA = audioEngine.decks.A;
 
-    if (!deckA.trackInfo && currentTrack) {
-      await audioEngine.loadTrack('A', currentTrack);
+    if (!deckA.audioBuffer && currentTrack) {
+      setIsLoadingTrack(true);
+      try {
+        await audioEngine.loadTrack('A', currentTrack);
+      } finally {
+        setIsLoadingTrack(false);
+      }
     }
 
     if (deckA.isPlaying) {
@@ -203,16 +235,28 @@ const CasualPlayer = ({
     }
   };
 
-  // Play Specific Track
+  // Play Specific Track with full visual buffering and debounce protection
   const playTrack = async (track) => {
     if (!track) return;
+    isEndingRef.current = true;
+    setIsLoadingTrack(true);
     await audioEngine.resumeContext();
     audioEngine.updateCrossfader(0.0); // Output Deck A cleanly
-    await onTrackChange(track);
-    setTimeout(() => {
+
+    try {
+      await onTrackChange(track);
       audioEngine.play('A');
       setIsPlaying(true);
-    }, 150);
+      setCurrentTime(0);
+      setDuration(track.duration || 300);
+    } catch (err) {
+      console.error('Failed to play track in CasualPlayer:', err);
+    } finally {
+      setIsLoadingTrack(false);
+      setTimeout(() => {
+        isEndingRef.current = false;
+      }, 1200);
+    }
   };
 
   // Track Ended event handler
@@ -220,6 +264,9 @@ const CasualPlayer = ({
     if (repeatMode === 'one') {
       audioEngine.seek('A', 0);
       audioEngine.play('A');
+      setTimeout(() => {
+        isEndingRef.current = false;
+      }, 1000);
       return;
     }
     handleNextTrack();
@@ -347,6 +394,12 @@ const CasualPlayer = ({
                 className="casual-art-img"
               />
               <div className={`casual-art-glow ${isPlaying ? 'active' : ''}`} />
+              {isLoadingTrack && (
+                <div className="casual-art-loading-overlay">
+                  <div className="casual-spinner" />
+                  <span>LOADING AUDIO...</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -428,8 +481,13 @@ const CasualPlayer = ({
             </button>
 
             {/* Big Play / Pause Button */}
-            <button onClick={handleTogglePlay} className="casual-play-btn" title={isPlaying ? 'Pause' : 'Play'}>
-              {isPlaying ? '⏸' : '▶'}
+            <button
+              onClick={handleTogglePlay}
+              disabled={isLoadingTrack}
+              className={`casual-play-btn ${isLoadingTrack ? 'loading' : ''}`}
+              title={isLoadingTrack ? 'Buffering audio...' : isPlaying ? 'Pause' : 'Play'}
+            >
+              {isLoadingTrack ? '⏳' : isPlaying ? '⏸' : '▶'}
             </button>
 
             {/* Next Track */}
@@ -529,7 +587,13 @@ const CasualPlayer = ({
                     className={`queue-track-item ${isCurrent ? 'active-track' : ''} ${track.isSmartPick ? 'smart-pick-item' : ''}`}
                   >
                     <div className="queue-track-num">
-                      {isCurrent ? <span className="playing-pulse">▶</span> : idx + 1}
+                      {isCurrent && isLoadingTrack ? (
+                        <span className="loading-pulse">⏳</span>
+                      ) : isCurrent ? (
+                        <span className="playing-pulse">▶</span>
+                      ) : (
+                        idx + 1
+                      )}
                     </div>
 
                     <img
