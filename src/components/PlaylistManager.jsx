@@ -11,7 +11,7 @@ const PlaylistManager = ({
   onOpenSpotify = () => {},
   onOpenVibeMix = () => {},
   onOpenSpotifyAccount = () => {},
-  onOpenMultiStream = () => {},
+  onOpenYouTube = () => {},
 }) => {
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
@@ -884,9 +884,9 @@ const PlaylistManager = ({
             <span>👤</span> Spotify Library
           </button>
 
-          {/* YouTube Music Quick Button */}
+          {/* YouTube Music & YouTube Button */}
           <button
-            onClick={() => onOpenMultiStream('youtube')}
+            onClick={onOpenYouTube}
             style={{
               background: 'linear-gradient(180deg, #381515 0%, #200a0a 100%)',
               border: '1px solid #ff0000',
@@ -901,18 +901,18 @@ const PlaylistManager = ({
               gap: '6px',
               boxShadow: '0 0 10px rgba(255, 0, 0, 0.25)',
             }}
-            title="Search & Stream from YouTube Music"
+            title="Stream & mix songs directly from YouTube Music / YouTube"
           >
             <span>🔴</span> YouTube Music
           </button>
 
-          {/* Universal Multi-Platform Stream Button */}
+          {/* Spotify Search Button */}
           <button
-            onClick={() => onOpenMultiStream('all')}
+            onClick={onOpenSpotify}
             style={{
-              background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(123, 0, 255, 0.2) 100%)',
-              border: '1px solid #00f0ff88',
-              color: '#00f0ff',
+              background: 'linear-gradient(180deg, #122919 0%, #0c1c11 100%)',
+              border: '1px solid #1db954',
+              color: '#1db954',
               borderRadius: '5px',
               padding: '7px 12px',
               fontSize: '11px',
@@ -921,11 +921,10 @@ const PlaylistManager = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 0 10px rgba(0, 240, 255, 0.25)',
             }}
-            title="Paste any link or search across YouTube Music, Spotify, SoundCloud, Apple Music & Audius"
+            title="Search Spotify track catalog or paste Spotify track link"
           >
-            <span>🌐</span> Stream Any Platform
+            <span>🟢</span> Spotify Search
           </button>
         </div>
 
