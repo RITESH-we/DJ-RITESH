@@ -9,6 +9,7 @@ import ClubVisualizer from './components/ClubVisualizer';
 import SoundFxBoard from './components/SoundFxBoard';
 import VibeCardModal from './components/VibeCardModal';
 import YouTubeModal from './components/YouTubeModal';
+import CasualPlayer from './components/CasualPlayer';
 import audioEngine from './audio/audioEngine';
 import autoDjEngine from './audio/autoDjEngine';
 import spotifyService from './services/spotifyService';
@@ -23,6 +24,7 @@ const App = () => {
   const [isDeviceVerified, setIsDeviceVerified] = useState(spotifyService.isVerified());
   const [tribeAesthetic, setTribeAesthetic] = useState('hybrid'); // 'hybrid' | 'millennial' | 'genz'
   const [auraEnergy, setAuraEnergy] = useState(0.2);
+  const [appMode, setAppMode] = useState('dj'); // 'dj' | 'player'
 
   // Modals
   const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false);
@@ -134,6 +136,14 @@ const App = () => {
   const handleStartAudio = async () => {
     await audioEngine.resumeContext();
     setAudioStarted(true);
+  };
+
+  const handleCasualTrackChange = async (track) => {
+    await audioEngine.resumeContext();
+    setAudioStarted(true);
+    audioEngine.updateCrossfader(0.0);
+    setActiveTracks((prev) => ({ ...prev, A: track }));
+    await audioEngine.loadTrack('A', track);
   };
 
   // Determine on-air active deck and track for real-time audio-reactive graphics stage
@@ -289,6 +299,71 @@ const App = () => {
         </div>
 
         <div className="header-actions">
+          {/* Main Console Mode Switcher: PRO DJ vs CASUAL PLAYER */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: '#090d15',
+              padding: '3px',
+              borderRadius: '8px',
+              border: '1.5px solid #28374f',
+              gap: '3px',
+              boxShadow: '0 0 15px rgba(0,0,0,0.6)',
+            }}
+          >
+            <button
+              onClick={() => {
+                setAppMode('dj');
+                autoDjEngine.setMixMode('smartOutro');
+              }}
+              style={{
+                background: appMode === 'dj' ? 'linear-gradient(135deg, #00f0ff 0%, #7b00ff 100%)' : 'transparent',
+                color: appMode === 'dj' ? '#000000' : '#8fa4bf',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontFamily: 'Orbitron, sans-serif',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: appMode === 'dj' ? '0 0 14px rgba(0, 240, 255, 0.45)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>🎛️</span> PRO DJ
+            </button>
+
+            <button
+              onClick={() => {
+                setAppMode('player');
+                audioEngine.updateCrossfader(0.0);
+                autoDjEngine.toggleAutoDJ(false);
+              }}
+              style={{
+                background: appMode === 'player' ? 'linear-gradient(135deg, #00ffaa 0%, #00f0ff 100%)' : 'transparent',
+                color: appMode === 'player' ? '#000000' : '#8fa4bf',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontFamily: 'Orbitron, sans-serif',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: appMode === 'player' ? '0 0 14px rgba(0, 255, 170, 0.55)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>🎧</span> CASUAL PLAYER
+            </button>
+          </div>
+
           {/* Tribe Aesthetic Switcher: Millennial × Gen Z */}
           <div
             style={{
@@ -459,105 +534,120 @@ const App = () => {
         </div>
       </header>
 
-      {/* 3D Audio-Reactive Club Visualizer Stage */}
-      <ClubVisualizer
-        activeTrack={currentOnAirTrack}
-        activeDeckId={currentDeckId}
-      />
-
-      {/* Club & Festival Soundboard (Millennial + Gen Z Drops) */}
-      <SoundFxBoard tribeAesthetic={tribeAesthetic} />
-
-      {/* Mobile Console Tab Switcher (Touch friendly) */}
-      <div className="mobile-view-tabs">
-        <button
-          type="button"
-          className={`mobile-view-tab ${mobileView === 'all' ? 'active-all' : ''}`}
-          onClick={() => setMobileView('all')}
-        >
-          ⚡ ALL
-        </button>
-        <button
-          type="button"
-          className={`mobile-view-tab ${mobileView === 'A' ? 'active-A' : ''}`}
-          onClick={() => setMobileView('A')}
-        >
-          🔵 DECK A
-        </button>
-        <button
-          type="button"
-          className={`mobile-view-tab ${mobileView === 'mixer' ? 'active-mixer' : ''}`}
-          onClick={() => setMobileView('mixer')}
-        >
-          🎛️ MIXER
-        </button>
-        <button
-          type="button"
-          className={`mobile-view-tab ${mobileView === 'B' ? 'active-B' : ''}`}
-          onClick={() => setMobileView('B')}
-        >
-          🔴 DECK B
-        </button>
-      </div>
-
-      {/* Main DJ Console Hardware Chassis */}
-      <main className="dj-console">
-        {/* Left Deck (Deck A) */}
-        {(mobileView === 'all' || mobileView === 'A') && (
-          <Deck
-            deckId="A"
-            track={activeTracks.A}
-            otherDeckId="B"
-            accentColor="#00f0ff"
-            tribeAesthetic={tribeAesthetic}
-            onTrackEnd={() => {
-              if (autoDjEngine.enabled) {
-                autoDjEngine.triggerTransition();
-              }
-            }}
-          />
-        )}
-
-        {/* Center Mixer */}
-        {(mobileView === 'all' || mobileView === 'mixer') && (
-          <MixerCenter
-            crossfadeValue={crossfadeVal}
-            onCrossfadeChange={handleCrossfadeChange}
-            tribeAesthetic={tribeAesthetic}
-          />
-        )}
-
-        {/* Right Deck (Deck B) */}
-        {(mobileView === 'all' || mobileView === 'B') && (
-          <Deck
-            deckId="B"
-            track={activeTracks.B}
-            otherDeckId="A"
-            accentColor="#ff0077"
-            tribeAesthetic={tribeAesthetic}
-            onTrackEnd={() => {
-              if (autoDjEngine.enabled) {
-                autoDjEngine.triggerTransition();
-              }
-            }}
-          />
-        )}
-      </main>
-
-      {/* Track Library & Auto-DJ Manager */}
-      <section className="dj-library-section">
-        <PlaylistManager
+      {appMode === 'player' ? (
+        <CasualPlayer
           playlist={playlist}
           setPlaylist={setPlaylist}
-          activeTracks={activeTracks}
-          onLoadToDeck={handleLoadToDeck}
-          onStartPlaylistBeatMix={handleStartPlaylistBeatMix}
+          currentTrack={activeTracks.A || playlist[0]}
+          onTrackChange={handleCasualTrackChange}
+          tribeAesthetic={tribeAesthetic}
+          onOpenYouTube={() => setIsYouTubeModalOpen(true)}
           onOpenSpotify={() => setIsSpotifyModalOpen(true)}
           onOpenVibeMix={() => setIsVibeMixOpen(true)}
-          onOpenSpotifyAccount={() => setIsSpotifyAccountOpen(true)}
-          onOpenYouTube={() => setIsYouTubeModalOpen(true)}
         />
-      </section>
+      ) : (
+        <>
+          {/* 3D Audio-Reactive Club Visualizer Stage */}
+          <ClubVisualizer
+            activeTrack={currentOnAirTrack}
+            activeDeckId={currentDeckId}
+          />
+
+          {/* Club & Festival Soundboard (Millennial + Gen Z Drops) */}
+          <SoundFxBoard tribeAesthetic={tribeAesthetic} />
+
+          {/* Mobile Console Tab Switcher (Touch friendly) */}
+          <div className="mobile-view-tabs">
+            <button
+              type="button"
+              className={`mobile-view-tab ${mobileView === 'all' ? 'active-all' : ''}`}
+              onClick={() => setMobileView('all')}
+            >
+              ⚡ ALL
+            </button>
+            <button
+              type="button"
+              className={`mobile-view-tab ${mobileView === 'A' ? 'active-A' : ''}`}
+              onClick={() => setMobileView('A')}
+            >
+              🔵 DECK A
+            </button>
+            <button
+              type="button"
+              className={`mobile-view-tab ${mobileView === 'mixer' ? 'active-mixer' : ''}`}
+              onClick={() => setMobileView('mixer')}
+            >
+              🎛️ MIXER
+            </button>
+            <button
+              type="button"
+              className={`mobile-view-tab ${mobileView === 'B' ? 'active-B' : ''}`}
+              onClick={() => setMobileView('B')}
+            >
+              🔴 DECK B
+            </button>
+          </div>
+
+          {/* Main DJ Console Hardware Chassis */}
+          <main className="dj-console">
+            {/* Left Deck (Deck A) */}
+            {(mobileView === 'all' || mobileView === 'A') && (
+              <Deck
+                deckId="A"
+                track={activeTracks.A}
+                otherDeckId="B"
+                accentColor="#00f0ff"
+                tribeAesthetic={tribeAesthetic}
+                onTrackEnd={() => {
+                  if (autoDjEngine.enabled) {
+                    autoDjEngine.triggerTransition();
+                  }
+                }}
+              />
+            )}
+
+            {/* Center Mixer */}
+            {(mobileView === 'all' || mobileView === 'mixer') && (
+              <MixerCenter
+                crossfadeValue={crossfadeVal}
+                onCrossfadeChange={handleCrossfadeChange}
+                tribeAesthetic={tribeAesthetic}
+              />
+            )}
+
+            {/* Right Deck (Deck B) */}
+            {(mobileView === 'all' || mobileView === 'B') && (
+              <Deck
+                deckId="B"
+                track={activeTracks.B}
+                otherDeckId="A"
+                accentColor="#ff0077"
+                tribeAesthetic={tribeAesthetic}
+                onTrackEnd={() => {
+                  if (autoDjEngine.enabled) {
+                    autoDjEngine.triggerTransition();
+                  }
+                }}
+              />
+            )}
+          </main>
+
+          {/* Track Library & Auto-DJ Manager */}
+          <section className="dj-library-section">
+            <PlaylistManager
+              playlist={playlist}
+              setPlaylist={setPlaylist}
+              activeTracks={activeTracks}
+              onLoadToDeck={handleLoadToDeck}
+              onStartPlaylistBeatMix={handleStartPlaylistBeatMix}
+              onOpenSpotify={() => setIsSpotifyModalOpen(true)}
+              onOpenVibeMix={() => setIsVibeMixOpen(true)}
+              onOpenSpotifyAccount={() => setIsSpotifyAccountOpen(true)}
+              onOpenYouTube={() => setIsYouTubeModalOpen(true)}
+            />
+          </section>
+        </>
+      )}
 
       {/* Spotify Search & Link Modal */}
       <SpotifyModal
